@@ -1226,6 +1226,28 @@ void OLSR::recv(Route_Mac_Block*  cp){
 				nodeid[18] =( cp-> buffer_[7] & 0x20) >> 5;
 				nodeid[19] =(  cp->buffer_[7] & 0x10) >> 4;
 
+		        char dsnodeid[20];
+		        dsnodeid[0] =( cp-> buffer_[9] & 0x80) >> 7;
+		        dsnodeid[1] =(  cp->buffer_[9] & 0x40) >> 6;
+		        dsnodeid[2] =(  cp->buffer_[9] & 0x20) >> 5;
+		        dsnodeid[3] =( cp-> buffer_[9] & 0x10) >> 4;
+		        dsnodeid[4] =( cp-> buffer_[9] & 0x08) >> 3;
+		        dsnodeid[9] =(  cp->buffer_[9] & 0x04) >> 2;
+		        dsnodeid[10] =( cp-> buffer_[9] & 0x02) >> 1;
+		        dsnodeid[11] = cp-> buffer_[9] & 0x01;
+		        dsnodeid[8] =(  cp->buffer_[10] & 0x80) >> 7;
+		        dsnodeid[9] =(  cp->buffer_[10] & 0x40) >> 6;
+		        dsnodeid[10] =(  cp->buffer_[10] & 0x20) >> 5;
+		        dsnodeid[11] =(  cp->buffer_[10] & 0x10) >> 4;
+				dsnodeid[12] =(  cp->buffer_[10] & 0x08) >> 3;
+				dsnodeid[13] =(  cp->buffer_[10] & 0x04) >> 2;
+				dsnodeid[14] =(  cp->buffer_[10] & 0x02) >> 1;
+				dsnodeid[15] =  cp->buffer_[10] & 0x01;
+				dsnodeid[16] =(  cp->buffer_[11] & 0x80) >> 7;
+				dsnodeid[17] =(  cp->buffer_[11] & 0x40) >> 6;
+				dsnodeid[18] =( cp-> buffer_[11] & 0x20) >> 5;
+				dsnodeid[19] =(  cp->buffer_[11] & 0x10) >> 4;
+
 				 int sum_tc = 0;
 				 fprintf (stdout,"  TC: \n");
 				 for  (int i = 0; i < 20 ; i ++ ){
@@ -2337,6 +2359,47 @@ void OLSR::process_tc(OLSR_msg& msg) {
 	// MUST be removed from the topology set.
 	state_.erase_older_topology_tuples(msg.orig_node_id(), tc.ansn());
 
+
+
+	//added by xyy
+
+	//增加不在本地DS节点集中的DS节点
+	for (int i = 0; i < tc.dsnum; i++) {
+		if(i >= 0 && i < OLSR_MAX_ADDRS ){
+			OLSR_ds_tuple* ds_tuple = state_.find_ds_tuple(tc.ds_main_node_id(i), msg.orig_node_id());
+			if( ds_tuple == NULL ){
+				OLSR_ds_tuple* ds_tuple = new OLSR_ds_tuple;
+				ds_tuple->ds_main_node_id() = tc.ds_main_node_id(i);
+				ds_tuple->ds_choose_node_id() = msg.orig_node_id();
+
+				fprintf (stdout, "  " );
+				state_.insert_ds_tuple(ds_tuple);
+
+			}
+		}
+	}
+
+
+	//删除过期的DS节点
+	bool exist = false;
+	for (dsset_tc_t::iterator it = dsset_tc().begin(); it != dsset_tc().end(); it++) {
+		OLSR_ds_tuple* ds_tuple = *it;
+		if( ds_tuple->ds_choose_node_id() == msg.orig_node_id() ){//查看本地DS集中由发送TC消息的源节点更新的DS消息
+			exist = false;
+			//查看本地的DS节点集和TC发送过来的DS节点集是否相同
+			for (int i = 0; i < tc.dsnum; i++) {
+				if(i >= 0 && i < OLSR_MAX_ADDRS &&
+						ds_tuple->ds_main_node_id() == tc.ds_main_node_id(i) ){
+					exist = true;
+					break;
+				}
+			}
+			if(exist == false)
+				state_.erase_ds_tuple(ds_tuple);
+		}
+	}
+
+
 	// 4. For each of the advertised neighbor main address received in
 	// the TC message:
 	fprintf (stdout, "  tc.count = %d\n", tc.count );
@@ -3037,6 +3100,47 @@ void OLSR::send_pkt() {
 				//sender address of the tc message
 				cp.buffer_[8]  =cp.buffer_[8] | (char(ra_node_id())& 0x1f);
 
+				//added by xyy
+				l = (*it).tc().dsnum;
+				for (int x = 0; x != l; x++)
+				{
+					node_id_ = (*it).tc().ds_main_node_id(x);
+					int y;
+					y = node_id_%8;
+					if(node_id_<8)
+					{//这里的封装，每个节点都是1--------不对，只会把是node_id的节点置为1，而这里面存放的是mprselset
+						if(y==0) { cp.buffer_[9]  =cp.buffer_[9] | 0x80;}
+						if(y==1){ cp.buffer_[9]  =cp.buffer_[9]  |0x40;}
+						if(y==2){ cp.buffer_[9]  =cp.buffer_[9]  |0x20;}
+						if(y==3){ cp.buffer_[9]  =cp.buffer_[9]  |0x10;}
+						if(y==4){ cp.buffer_[9]  =cp.buffer_[9]  |0x08;}
+						if(y==5){ cp.buffer_[9]  =cp.buffer_[9]  |0x04;}
+						if(y==6){ cp.buffer_[9]  =cp.buffer_[9]  |0x02;}
+						if(y==7){ cp.buffer_[9]  =cp.buffer_[9]  |0x01;}
+					}
+					else if(node_id_>15)
+					{
+						if(y==0){ cp.buffer_[11]  =cp.buffer_[11] |0x80;}
+						if(y==1){ cp.buffer_[11]  =cp.buffer_[11] |0x40;}
+						if(y==2){ cp.buffer_[11]  =cp.buffer_[11] |0x20;}
+						if(y==3){ cp.buffer_[11]  =cp.buffer_[11] |0x10;}
+					}
+					else
+					{
+						if(y==0){ cp.buffer_[10]  =cp.buffer_[10]   |0x80;}
+						if(y==1){ cp.buffer_[10]    =cp.buffer_[10]   |0x40;}
+						if(y==2){ cp.buffer_[10]    =cp.buffer_[10]   |0x20;}
+						if(y==3){ cp.buffer_[10]    =cp.buffer_[10]   |0x10;}
+						if(y==4){ cp.buffer_[10]    =cp.buffer_[10]   |0x08;}
+						if(y==5){ cp.buffer_[10]   = cp.buffer_[10]  |0x04;}
+						if(y==6){ cp.buffer_[10]   =cp.buffer_[10]  |0x02;}
+						if(y==7){ cp.buffer_[10]   =cp.buffer_[10]  |0x01;}
+					}
+				}
+
+
+
+
 //				//added by xyy
 //				cp.buffer_[9]  =cp.buffer_[9] | (char((*it).tc().saturation()) & 0x03);
 
@@ -3442,6 +3546,18 @@ void OLSR::send_tc() {
 			saturation = enque_msg(msg, JITTER);
 		    fprintf (stdout, "  normal : saturation = %d\n", saturation);
 		}
+
+
+	//added by xyy
+	for (dsset_hello_t::iterator it = dsset_hello().begin(); it != dsset_hello().end(); it++) {
+		OLSR_ds_tuple* ds_tuple = *it;
+		int dsnum = msg.tc().dsnum;
+
+		assert(dsnum >= 0 && dsnum < OLSR_MAX_ADDRS);
+		msg.tc().ds_main_node_id(dsnum) = ds_tuple->ds_main_node_id();
+		msg.tc().dsnum++;
+	}
+
 
 
 //		if (saturation < 5)
@@ -4489,6 +4605,27 @@ int OLSR::traf_queue_add(Traf_Queue *q, Traf_Queue_Content *data)
 //
 //	state_.insert_nodeidassoc_tuple(tuple);
 //}
+
+
+// added by xyy
+
+//void OLSR::add_ds_tuple(OLSR_ds_tuple* tuple) {
+//    fprintf (stdout, "CURRENT TIME = %f , STAGE = add_ds_tuple\n", CURRENT_TIME );
+//
+//	state_.insert_ds_tuple(tuple);
+//
+//}
+//
+//
+//
+//void OLSR::rm_ds_tuple(OLSR_ds_tuple* tuple) {
+//    fprintf (stdout, "CURRENT TIME = %f , STAGE = rm_ds_tuple\n", CURRENT_TIME );
+//
+//	state_.erase_ds_tuple(tuple);
+//
+//}
+
+
 
 //added by xyy
 void OLSR::UCDS_DS_computation()
