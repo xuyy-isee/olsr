@@ -3390,6 +3390,12 @@ void OLSR::send_hello() {
 				fprintf (stdout,"  node[%d] is MPR node chosen by node[%d].\n",  link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
 			}
 
+
+			else if (state_.find_cs_node_id( link_tuple->nb_main_node_id()) ){
+				nb_type = OLSR_CS_NEIGH;//是MPR的骨干节点
+				fprintf (stdout,"  node[%d] is CS node chosen by node[%d].\n",  link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
+			}
+
 //			//added by xyy
 //			//HELLO消息中只会标记该节点是不是骨干节点，以及该节点推选哪个邻居节点为骨干节点
 ////			else if ( msg.hello().ds_node() == 0 &&	state_.find_ds_node_id(link_tuple->nb_main_node_id()) )
@@ -4814,6 +4820,7 @@ void OLSR::UCDS_CS_computation()
 		break;
 	}
 
+	//打印一跳邻居节点
 	for (nbset_t::iterator it1 = nbset().begin(); it1 != nbset().end(); it1++){
 		OLSR_nb_tuple* nb_tuple = *it1;
 		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb_status = %d .  \n",
@@ -4821,6 +4828,7 @@ void OLSR::UCDS_CS_computation()
 	}
 	fprintf (stdout," \n");
 
+	//打印二跳邻居节点
 	for (nb2hopset_t::iterator it = nb2hopset().begin(); it != nb2hopset().end(); it++) {
 		OLSR_nb2hop_tuple* nb2hop_tuple = *it;
 		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb2hop_node_id = [%d] .  \n",
@@ -4855,61 +4863,6 @@ void OLSR::UCDS_CS_computation()
 			N2.push_back(nb2hop_tuple);
 		}
 	}
-
-
-
-	//在CS_candidate中推选CS节点
-	//节点j和k应该是二跳邻居节点的关系
-	//当节点j和k的共同邻居中有一个CS成员，此时CS规则不用执行
-	//若节点j和k的共同邻居节点中存在多个CS'，则具有最高支配因子的CS'节点被选为CS成员
-	//下面这个代码的编写还存在问题，要好好规划！！！！
-	int max_nbnum_cs_node_id = 0;
-	int max_nbnum_cs = 0;
-	bool cs_not =false;
-
-	for (nb2hopset_t::iterator it0 = N2.begin(); it0 != N2.end(); it0++) {
-		OLSR_nb2hop_tuple* nb2hop_tuple = *it0;
-
-//		//找到本节点和其邻居节点的共同邻居节点
-//		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());
-
-		//节点j和k---本节点和i其二跳邻居节点之间至少一个为DS节点
-		if( state_.find_ds_node_id( main_node_id ) == 0 &&
-			 state_.find_ds_node_id( nb2hop_tuple->nb2hop_node_id() ) == 0 )
-			continue;
-
-		for (linkset_t::iterator it1 = linkset().begin(); it1 != linkset().end(); it1++) {
-			OLSR_link_tuple* link_tuple = *it1;
-			if( link_tuple->nb_main_node_id() == nb2hop_tuple->nb_main_node_id() ){
-				//如果该共同邻居是CS节点，则不执行选取CS
-				if ( link_tuple->nb_main_node_cs() == 1 ){
-					cs_not = true;
-					break;
-				}
-				//如果该共同邻居是CS候选节点，则选取支配因子最大的作为CS节点
-				else if(  link_tuple->nb_main_node_cs() == 0 &&
-								link_tuple->nb_node_cs_candidate() == 1 ){
-
-					for (linkset_t::iterator it2 = linkset().begin(); it2 != linkset().end(); it2++) {
-						OLSR_link_tuple* link_tuple = *it2;
-						if ( link_tuple->nb_main_node_cs() == 1&&
-								link_tuple->nb_main_node_nbnum() > 0 &&
-							  (link_tuple->nb_main_node_nbnum() > max_nbnum_cs ||
-									  ( link_tuple->nb_main_node_nbnum() == max_nbnum_cs && link_tuple->nb_main_node_id() > max_nbnum_cs_node_id) ) ){
-							max_nbnum_cs_node_id = link_tuple->nb_main_node_id();
-							max_nbnum_cs = link_tuple->nb_main_node_nbnum();
-						}
-					}
-
-				}
-			}
-		}
-	}
-
-
-
-
-
 
 
 
@@ -4954,6 +4907,64 @@ void OLSR::UCDS_CS_computation()
 
 
 
+	//在CS_candidate中推选CS节点
+	//节点j和k应该是二跳邻居节点的关系
+	//(1) 当节点j和k的共同邻居中有一个CS成员，此时CS规则不用执行
+	//(2) 若节点j和k的共同邻居节点中存在多个CS'，则具有最高支配因子的CS'节点被选为CS成员
+	//下面这个代码的编写还存在问题，要好好规划！！！！
+	int max_nbnum_cs_node_id = 0;
+	int max_nbnum_cs = 0;
+	bool cs_not =false;
+
+	for (nb2hopset_t::iterator it0 = N2.begin(); it0 != N2.end(); it0++) {
+		OLSR_nb2hop_tuple* nb2hop_tuple = *it0;
+		//初始化参数
+		max_nbnum_cs_node_id = 0;
+		max_nbnum_cs = 0;
+		cs_not =false;
+
+//		//找到本节点和其邻居节点的共同邻居节点
+//		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());
+
+		//节点j和k---本节点j和其二跳邻居节点k，两者之间至少一个为DS节点
+		if( state_.find_ds_node_id( main_node_id ) == 0 &&
+			 state_.find_ds_tc_node_id( nb2hop_tuple->nb2hop_node_id() ) == 0 )//从通过tc消息得到的DS节点集中寻找
+			continue;
+
+		for (linkset_t::iterator it1 = linkset().begin(); it1 != linkset().end(); it1++) {
+			OLSR_link_tuple* link_tuple = *it1;
+			//判断该一跳节点是否为连接本节点j和二跳节点k的中间节点，即是否是两节点的公共节点
+			if( link_tuple->nb_main_node_id() == nb2hop_tuple->nb_main_node_id() ){
+				//如果该共同邻居是CS节点，则不执行选取CS，直接跳出循环
+//				if ( link_tuple->nb_main_node_cs() == 1 ){
+				if ( state_.find_cs_node_id( link_tuple->nb_main_node_cs() ) == 1 ){
+					cs_not = true;
+					break;
+				}
+				//如果该共同邻居是CS候选节点，则选取支配因子最大的作为CS节点
+				else if(  link_tuple->nb_main_node_cs() == 0 &&
+								link_tuple->nb_node_cs_candidate() == 1 ){
+
+					//进入的条件是：max是初始化的状态+支配因子大于0+在相同支配因子的情况下选择节点数目更大的
+					if ( ( max_nbnum_cs_node_id = 0 && max_nbnum_cs = 0 ) && link_tuple->nb_main_node_nbnum() > 0 &&
+							(link_tuple->nb_main_node_nbnum() > max_nbnum_cs ||
+									( link_tuple->nb_main_node_nbnum() == max_nbnum_cs &&
+									  link_tuple->nb_main_node_id() > max_nbnum_cs_node_id) ) ){
+						max_nbnum_cs_node_id = link_tuple->nb_main_node_id();
+						max_nbnum_cs = link_tuple->nb_main_node_nbnum();
+					}
+
+				}
+			}
+		}
+		//如果确定某节点为CS节点，则将其加入到CS本地节点集中
+		if( cs_not == false && max_nbnum_cs != 0 )
+			state_.insert_cs_node_id(max_nbnum_cs_node_id);
+
+	}
+
+
+
 
 	bool cs_never = false;//stage2 : 标志本节点是否一定不为CS成员
 	bool cs_must = false;//stage3 : 标志本节点必须为cs节点
@@ -4980,6 +4991,7 @@ void OLSR::UCDS_CS_computation()
 				for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
 					OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
 					//由于N2中已经考虑过双向链路了，所以这里只要考察一条链路的存在就可以了
+					//以下是否任意邻居节点都直接相连，以下的判断是相连的
 					if ( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
 							nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
 						cs_never =  true;
@@ -4998,7 +5010,7 @@ void OLSR::UCDS_CS_computation()
 		if( cs_never == true )
 			fprintf (stdout,"  The node stop by Stage2, this node can't be CS. \n");
 		else
-			fprintf (stdout,"  The node pass the Stage2, this node will go to Stage3. \n");
+			fprintf (stdout,"  The node pass the Stage2, this node will go to Stage3, may be this node will be CS node. \n");
 
 
 		//stage3 得到必须为CS节点
@@ -5008,6 +5020,7 @@ void OLSR::UCDS_CS_computation()
 
 				for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
 					OLSR_nb_tuple* nb_tuple1 = *it1;
+					step = 0;
 					cs_must = false;
 					cs_must1 = false;
 					cs_must2 = false;
@@ -5046,14 +5059,14 @@ void OLSR::UCDS_CS_computation()
 
 					//若两个邻居节点都为DS节点
 					else if( step == 3 ||
-								(	state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
+								   (state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
 									state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1 ) ){
 
 						//两节点不直接相连
 						for (nb2hopset_t::iterator it3 = N2.begin(); it3 != N2.end(); it3++) {
 							OLSR_nb2hop_tuple* nb2hop_tuple = *it3;
 							if ( it3 == N2.begin() )
-								cs_must2 = true;//初始化
+								cs_must1 = true;//初始化，这里的初始化不能放到外面，乙方N2为空的时候把节点加到CS‘中
 
 							if( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
 								 nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
@@ -5062,7 +5075,7 @@ void OLSR::UCDS_CS_computation()
 							}
 						}
 
-						if( cs_must1 == false )//两节点直接相连
+						if( cs_must1 == false )//存在两邻居节点直接相连
 							continue;
 
 						//且两节点不存在公共邻居(非本节点)
@@ -5076,8 +5089,8 @@ void OLSR::UCDS_CS_computation()
 										cs_must2 = true;//初始化
 
 									if( nb2hop_tuple1->nb_main_node_id() == nb_tuple1->nb_main_node_id() ){
-										if( nb2hop_tuple0->nb2hop_node_id() == nb2hop_tuple1->nb2hop_node_id() &&
-											 nb2hop_tuple0->nb2hop_node_id() != main_node_id ){
+										if( nb2hop_tuple0->nb2hop_node_id() == nb2hop_tuple1->nb2hop_node_id() ){ //}&&
+//											 nb2hop_tuple0->nb2hop_node_id() != main_node_id ){
 											cs_must2 = false;
 											break;
 										}
@@ -5107,7 +5120,7 @@ void OLSR::UCDS_CS_computation()
 		std::set<int> dsn_node2;
 		if( cs_never == false && cs_must == false ){
 
-			//stage4--step3
+			//stage4--step2-2
 			for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
 				OLSR_nb_tuple* nb_tuple0 = *it0;
 
@@ -5115,7 +5128,7 @@ void OLSR::UCDS_CS_computation()
 					OLSR_nb_tuple* nb_tuple1 = *it1;
 					disjoint = false;
 
-					//若只有一个邻居节点为DS节点
+					//至少有一个邻居节点为DS节点
 					if( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 ||
 						 state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1  ){
 						//CS例外规则第二条：本节点与非DS节点有一个共同的DS邻居节点，CS规则不用执行
@@ -5298,7 +5311,8 @@ void OLSR::UCDS_mpr_computation()
 //					fprintf( stdout, "  node[%d] is the DS node .\n", link_tuple->nb_main_node_id() );
 
 //				else if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 ){
-				if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 ){
+				if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 &&
+						state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 0 ){
 //					fprintf( stdout, "  node[%d] isn't DS node .\n", link_tuple->nb_main_node_id() );
 
 					for (nb2hopset_t::iterator it1 = N2.begin(); it1 != N2.end(); it1++) {
