@@ -929,12 +929,17 @@ void OLSR::recv(Route_Mac_Block*  cp){
 		msg.ttl()     = (cp->buffer_[2] & 0xF8 ) >> 3;
 		msg.hop_count()     = ((cp->buffer_[2] & 0x07 ) << 2) + ((cp->buffer_[3] & 0xC0 ) >> 6);
 		msg.msg_seq_num()      = (cp->buffer_[3] & 0x3E) >> 1 ;
-		fprintf (stdout, "  msg.orig_node_id = %d, op.pkt_seq_num  = %x, msg.msg_seq_num = %x. \n",
-							msg.orig_node_id(), op.pkt_seq_num() , msg.msg_seq_num());
+
 //		fprintf (stdout, "  msg.orig_node_id()=%d, msg.ttl()=%x, msg.hop_count()=%x, msg.msg_seq_num()=%x\n",
 //							msg.orig_node_id(), msg.ttl() , msg.hop_count(), msg.msg_seq_num());
 
 		if (msg.msg_type() == OLSR_HELLO_MSG){
+
+			fprintf (stdout, "  node[%d] received HELLO from node[%d], sequence_num = %d. \n",
+								ra_node_id(), msg.orig_node_id(), msg.msg_seq_num());
+
+			fprintf (stdout, "  msg.orig_node_id = %d, op.pkt_seq_num  = %x, msg.msg_seq_num = %x. \n",
+								msg.orig_node_id(), op.pkt_seq_num() , msg.msg_seq_num());
 
 			  msg.hello().reserved()		=  0;
 			  if (quick_route()){
@@ -982,6 +987,14 @@ void OLSR::recv(Route_Mac_Block*  cp){
 				 }
 			 }
 
+//			 fprintf (stdout, "\n  node[%d] sent HELLO : mine_ds_node() = %d.\n",
+//					 msg.orig_node_id(),msg.hello().mine_ds_node() );
+
+			 fprintf (stdout, "\n  node[%d] sent HELLO : mine_ds_node() = %d, mine_cs_node() = %d, mine_cs_candidate() = %d .\n",
+					 msg.orig_node_id(),msg.hello().mine_ds_node(), msg.hello().mine_cs_node(), msg.hello().mine_cs_candidate() );
+
+//			 if( msg.orig_node_id() == 11 || msg.orig_node_id()  == 13)
+//				 msg.hello().mine_ds_node() = 1;
 
 //				 //test
 //				 if (  msg.orig_node_id() == 3 ||
@@ -1013,7 +1026,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 
 			  fprintf (stdout,"  HELLO : ");
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x08){//1000 : neighbor type = 2 = SYM_NEIGH; link type = 0 = UNSPEC_LINK
+				  if ( nodeid[i] == 0x04 && i != msg.orig_node_id() ){//1000 : neighbor type = 2 = SYM_NEIGH; link type = 0 = UNSPEC_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count0)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count0 + 1);
@@ -1028,7 +1041,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 				}
 
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x09){//1001 : neighbor type = 2 = SYM_NEIGH; link type = 1 = ASYM_LINK
+				  if ( nodeid[i] == 0x05 && i != msg.orig_node_id() ){//1001 : neighbor type = 2 = SYM_NEIGH; link type = 1 = ASYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count1)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count1 + 1);
@@ -1042,7 +1055,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count1= %d , ", count1);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0A){//1010 : neighbor type = 2 = SYM_NEIGH; link type = 2 = SYM_LINK
+				  if ( nodeid[i] == 0x06 && i != msg.orig_node_id() ){//1010 : neighbor type = 2 = SYM_NEIGH; link type = 2 = SYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count2)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count2 + 1);
@@ -1057,7 +1070,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count2= %d , ", count2);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0B){//1011 : neighbor type = 2 = SYM_NEIGH; link type = 3 = LOST_LINK
+				  if ( nodeid[i] == 0x07 && i != msg.orig_node_id() ){//1011 : neighbor type = 2 = SYM_NEIGH; link type = 3 = LOST_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count3)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count3 + 1);
@@ -1072,7 +1085,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count3= %d , ", count3);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x04){//0100 : neighbor type = 1 = NOT_NEIGH; link type = 0 = UNSPEC_LINK
+				  if ( nodeid[i] == 0x00 && i != msg.orig_node_id() ){//0100 : neighbor type = 1 = NOT_NEIGH; link type = 0 = UNSPEC_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count4)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count4 + 1);
@@ -1087,7 +1100,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count4= %d , ", count4);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x05){//0101 : neighbor type = 1 = NOT_NEIGH; link type = 1 = ASYM_LINK
+				  if ( nodeid[i] == 0x01 && i != msg.orig_node_id() ){//0101 : neighbor type = 1 = NOT_NEIGH; link type = 1 = ASYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count5)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count5 + 1);
@@ -1102,7 +1115,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count5= %d , ", count5);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x06){//0110 : neighbor type = 1 = NOT_NEIGH; link type = 2 = SYM_LINK
+				  if ( nodeid[i] == 0x02 && i != msg.orig_node_id() ){//0110 : neighbor type = 1 = NOT_NEIGH; link type = 2 = SYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count6)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count6 + 1);
@@ -1117,7 +1130,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count6= %d , ", count6);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x07){//0111 : neighbor type = 1 = NOT_NEIGH; link type = 3 = LOST_LINK
+				  if ( nodeid[i] == 0x03 && i != msg.orig_node_id() ){//0111 : neighbor type = 1 = NOT_NEIGH; link type = 3 = LOST_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count7)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count7 + 1);
@@ -1132,7 +1145,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count7= %d , ", count7);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0C){//1100 : neighbor type = 3 = MPR_NEIGH; link type = 0 = UNSPEC_LINK
+				  if ( nodeid[i] == 0x08 && i != msg.orig_node_id() ){//1100 : neighbor type = 3 = MPR_NEIGH; link type = 0 = UNSPEC_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count8)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count8 + 1);
@@ -1147,7 +1160,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count8= %d , ", count8);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0D){//1101 : neighbor type = 3 = MPR_NEIGH; link type = 1 = ASYM_LINK
+				  if ( nodeid[i] == 0x09 && i != msg.orig_node_id() ){//1101 : neighbor type = 3 = MPR_NEIGH; link type = 1 = ASYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count9)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count9 + 1);
@@ -1162,7 +1175,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count9= %d , ", count9);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0E){//1110 : neighbor type = 3 = MPR_NEIGH; link type = 2 = SYM_LINK
+				  if ( nodeid[i] == 0x0A && i != msg.orig_node_id() ){//1110 : neighbor type = 3 = MPR_NEIGH; link type = 2 = SYM_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count10)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count10 + 1);
@@ -1177,7 +1190,7 @@ void OLSR::recv(Route_Mac_Block*  cp){
 					fprintf (stdout,"count10= %d , ", count10);
 				}
 			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x0F){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
+				  if ( nodeid[i] == 0x0B && i != msg.orig_node_id() ){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
 						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
 						  msg.hello().hello_msg(sum).nb_main_node_id(count11)	     =  i ;
 						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count11 + 1);
@@ -1193,69 +1206,69 @@ void OLSR::recv(Route_Mac_Block*  cp){
 			}
 
 
-			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x00){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
-						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
-						  msg.hello().hello_msg(sum).nb_main_node_id(count12)	     =  i ;
-						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count12 + 1);
-						  count12 ++;
-				  }
-
-			  }
-			  if (count12 > 0)
-				{
-					msg.hello().hello_msg(sum).count = count12;
-					sum ++;
-					fprintf (stdout,"count12= %d , ", count12);
-				}
-
-			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x01){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
-						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
-						  msg.hello().hello_msg(sum).nb_main_node_id(count13)	     =  i ;
-						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count13 + 1);
-						  count13 ++;
-				  }
-
-			  }
-			if (count13 > 0)
-			{
-				msg.hello().hello_msg(sum).count = count13;
-				sum ++;
-				fprintf (stdout,"count13= %d , ", count13);
-			}
-
-			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x02){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
-						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
-						  msg.hello().hello_msg(sum).nb_main_node_id(count14)	     =  i ;
-						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count14 + 1);
-						  count14 ++;
-				  }
-
-			  }
-			  if (count14 > 0)
-				{
-					msg.hello().hello_msg(sum).count = count14;
-					sum ++;
-					fprintf (stdout,"count14= %d , ", count14);
-				}
-
-			  for  (int i = 0; i < 20 ; i ++ ){
-				  if ( nodeid[i] == 0x03){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
-						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
-						  msg.hello().hello_msg(sum).nb_main_node_id(count15)	     =  i ;
-						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count15 + 1);
-						  count15 ++;
-				  }
-
-			  }
-			  if (count15 > 0)
-			  {
-					msg.hello().hello_msg(sum).count = count15;
-					sum ++;
-					fprintf (stdout,"count15= %d , ", count15);
-				}
+//			  for  (int i = 0; i < 20 ; i ++ ){
+//				  if ( nodeid[i] == 0x0C && i != msg.orig_node_id() ){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
+//						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
+//						  msg.hello().hello_msg(sum).nb_main_node_id(count12)	     =  i ;
+//						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count12 + 1);
+//						  count12 ++;
+//				  }
+//
+//			  }
+//			  if (count12 > 0)
+//				{
+//					msg.hello().hello_msg(sum).count = count12;
+//					sum ++;
+//					fprintf (stdout,"count12= %d , ", count12);
+//				}
+//
+//			  for  (int i = 0; i < 20 ; i ++ ){
+//				  if ( nodeid[i] == 0x0D && i != msg.orig_node_id() ){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
+//						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
+//						  msg.hello().hello_msg(sum).nb_main_node_id(count13)	     =  i ;
+//						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count13 + 1);
+//						  count13 ++;
+//				  }
+//
+//			  }
+//			if (count13 > 0)
+//			{
+//				msg.hello().hello_msg(sum).count = count13;
+//				sum ++;
+//				fprintf (stdout,"count13= %d , ", count13);
+//			}
+//
+//			  for  (int i = 0; i < 20 ; i ++ ){
+//				  if ( nodeid[i] == 0x0E && i != msg.orig_node_id() ){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
+//						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
+//						  msg.hello().hello_msg(sum).nb_main_node_id(count14)	     =  i ;
+//						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count14 + 1);
+//						  count14 ++;
+//				  }
+//
+//			  }
+//			  if (count14 > 0)
+//				{
+//					msg.hello().hello_msg(sum).count = count14;
+//					sum ++;
+//					fprintf (stdout,"count14= %d , ", count14);
+//				}
+//
+//			  for  (int i = 0; i < 20 ; i ++ ){
+//				  if ( nodeid[i] == 0x0F && i != msg.orig_node_id() ){//1111 : neighbor type = 3 = MPR_NEIGH; link type = 3 = LOST_LINK
+//						  msg.hello().hello_msg(sum).link_code()	     =  nodeid[i] & 0x0F ;
+//						  msg.hello().hello_msg(sum).nb_main_node_id(count15)	     =  i ;
+//						  msg.hello().hello_msg(sum).link_msg_size()  = 4 + 4*(count15 + 1);
+//						  count15 ++;
+//				  }
+//
+//			  }
+//			  if (count15 > 0)
+//			  {
+//					msg.hello().hello_msg(sum).count = count15;
+//					sum ++;
+//					fprintf (stdout,"count15= %d , ", count15);
+//				}
 
 
 
@@ -1299,9 +1312,9 @@ void OLSR::recv(Route_Mac_Block*  cp){
 		        dsnodeid[2] =(  cp->buffer_[9] & 0x20) >> 5;
 		        dsnodeid[3] =( cp-> buffer_[9] & 0x10) >> 4;
 		        dsnodeid[4] =( cp-> buffer_[9] & 0x08) >> 3;
-		        dsnodeid[9] =(  cp->buffer_[9] & 0x04) >> 2;
-		        dsnodeid[10] =( cp-> buffer_[9] & 0x02) >> 1;
-		        dsnodeid[11] = cp-> buffer_[9] & 0x01;
+		        dsnodeid[5] =(  cp->buffer_[9] & 0x04) >> 2;
+		        dsnodeid[6] =( cp-> buffer_[9] & 0x02) >> 1;
+		        dsnodeid[7] = cp-> buffer_[9] & 0x01;
 		        dsnodeid[8] =(  cp->buffer_[10] & 0x80) >> 7;
 		        dsnodeid[9] =(  cp->buffer_[10] & 0x40) >> 6;
 		        dsnodeid[10] =(  cp->buffer_[10] & 0x20) >> 5;
@@ -1315,16 +1328,28 @@ void OLSR::recv(Route_Mac_Block*  cp){
 				dsnodeid[18] =( cp-> buffer_[11] & 0x20) >> 5;
 				dsnodeid[19] =(  cp->buffer_[11] & 0x10) >> 4;
 
-				 int sum_tc = 0;
+				 int sum_tc1 = 0;
 				 fprintf (stdout,"  TC: \n");
 				 for  (int i = 0; i < 20 ; i ++ ){
 					 if (nodeid[i] != 0){
-						 msg.tc().nb_main_node_id(sum_tc)	     =  i ;
-						 sum_tc ++;
+						 msg.tc().nb_main_node_id(sum_tc1)	     =  i ;
+						 sum_tc1 ++;
 						 fprintf (stdout,"  msg.tc().nb_main_node_id = %d , nodeid [%d] = %d \n",i,i,nodeid[i] );
 					 }
 				 }
-				 msg.tc().count =  sum_tc;
+				 fprintf (stdout,"  \n");
+
+				 int sum_tc2 = 0;
+				 for  (int i = 0; i < 20 ; i ++ ){
+					 if (dsnodeid[i] != 0){
+						 msg.tc().ds_main_node_id(sum_tc2)	     =  i ;
+						 sum_tc2 ++;
+						 fprintf (stdout,"  msg.tc().ds_main_node_id = %d , dsnodeid [%d] = %d \n",i,i,dsnodeid[i] );
+					 }
+				 }
+
+				 msg.tc().count =  sum_tc1;
+				 msg.tc().dsnum =  sum_tc2;
 				 msg.tc().s_node_id() = cp->buffer_[8] ;
 //				 //added by xyy
 //				 msg.tc().saturation() = cp->buffer_[9];
@@ -2371,6 +2396,9 @@ void OLSR::process_hello(OLSR_msg& msg, int receiver_main_node_id, int sender_ma
     fprintf (stdout,"  ");
 	UCDS_DS_computation();
 
+	//added by xyy
+    fprintf (stdout,"  ");
+	UCDS_CS_computation();
 
     fprintf (stdout,"  ");
 //	mpr_computation();   //mpr推选
@@ -2430,6 +2458,14 @@ void OLSR::process_tc(OLSR_msg& msg) {
 
 	//added by xyy
 
+	//打印DS节点
+//	for (dsset_tc_t::iterator it = dsset_tc().begin(); it != dsset_tc().end(); it++) {
+//		OLSR_ds_tuple* ds_tuple = *it;
+//		fprintf (stdout, "    ds_main_node_id() = %d, ds_choose_node_id() = %d. \n",
+//				ds_tuple->ds_main_node_id(),  ds_tuple->ds_choose_node_id() );
+//	}
+//	fprintf (stdout, "  \n" );
+
 	//增加不在本地DS节点集中的DS节点
 	for (int i = 0; i < tc.dsnum; i++) {
 		if(i >= 0 && i < OLSR_MAX_ADDRS ){
@@ -2442,9 +2478,13 @@ void OLSR::process_tc(OLSR_msg& msg) {
 				fprintf (stdout, "  " );
 				state_.insert_ds_tuple(ds_tuple);
 
+				fprintf (stdout, "    ADD : ds_main_node_id() = %d, ds_choose_node_id() = %d. \n",
+						ds_tuple->ds_main_node_id(),  ds_tuple->ds_choose_node_id() );
 			}
 		}
 	}
+
+//	fprintf (stdout, "  \n" );
 
 
 	//删除过期的DS节点
@@ -2461,10 +2501,52 @@ void OLSR::process_tc(OLSR_msg& msg) {
 					break;
 				}
 			}
-			if(exist == false)
+			if(exist == false){
 				state_.erase_ds_tuple(ds_tuple);
+				fprintf (stdout, "    ERASE : ds_main_node_id() = %d, ds_choose_node_id() = %d. \n",
+						ds_tuple->ds_main_node_id(),  ds_tuple->ds_choose_node_id() );
+			}
 		}
 	}
+
+	//删除DS节点表中连本节点i都表示自己不是DS节点的所有表项
+	bool ori_ds = false;
+	for (int i = 0; i < tc.dsnum; i++) {
+		if(i >= 0 && i < OLSR_MAX_ADDRS &&
+				msg.orig_node_id() == tc.ds_main_node_id(i) ){
+			ori_ds = true;
+			break;
+		}
+	}
+
+	if ( ori_ds == false ){
+		for (dsset_tc_t::iterator it = dsset_tc().begin(); it != dsset_tc().end(); it++) {
+			OLSR_ds_tuple* ds_tuple = *it;
+			if( ds_tuple->ds_main_node_id() == msg.orig_node_id() )//查看本地DS集中DS节点为发送TC消息源节点号的表项
+					state_.erase_ds_tuple(ds_tuple);
+		}
+	}
+
+	fprintf (stdout, "  \n" );
+
+	//打印DS节点
+	for (dsset_tc_t::iterator it = dsset_tc().begin(); it != dsset_tc().end(); it++) {
+		OLSR_ds_tuple* ds_tuple = *it;
+		fprintf (stdout, "    ds_main_node_id() = %d, ds_choose_node_id() = %d. \n",
+				ds_tuple->ds_main_node_id(),  ds_tuple->ds_choose_node_id() );
+	}
+
+	mprset_t ds_tuple_node_ids;
+	int ds_num = 0;
+	for (dsset_tc_t::iterator it = dsset_tc().begin(); it != dsset_tc().end(); it++) {
+		OLSR_ds_tuple* ds_tuple = *it;
+		if( ds_tuple_node_ids.find(ds_tuple->ds_main_node_id()) == ds_tuple_node_ids.end() ){
+			ds_tuple_node_ids.insert(ds_tuple->ds_main_node_id());
+			fprintf (stdout, "    ds_main_node_id() = %d. \n", ds_tuple->ds_main_node_id() );
+			ds_num++;
+		}
+	}
+	fprintf (stdout, "    ds_num = %d. \n", ds_num );
 
 
 	// 4. For each of the advertised neighbor main address received in
@@ -2939,10 +3021,10 @@ int OLSR::enque_msg(OLSR_msg& msg, double delay) {
 void OLSR::send_pkt() {
 	fprintf (stdout, "CURRENT TIME = %f , STAGE = send_pkt\n", CURRENT_TIME );
 
-// fprintf (stdout, "CURRENT TIME = %f , send the packet \n", CURRENT_TIME);
+//	fprintf(stdout, "  I am here.\n" );
 
 	int num_msgs = msgs_.size();
-	//fprintf(stdout, " %d message size ",num_msgs );
+//	fprintf(stdout, " %d message size \n",num_msgs );
 	if (num_msgs == 0)
 		return;
 
@@ -2959,9 +3041,8 @@ void OLSR::send_pkt() {
 			if (j == OLSR_MAX_MSGS)
 				break;
 //			fprintf (stdout, "send message type is %d \n", (*it).msg_type());
-			if ((*it).msg_type() == OLSR_HELLO_MSG)
-			{
-				   fprintf (stdout,"  node[%d] send HELLO. \n",  (*it).orig_node_id());
+			if ((*it).msg_type() == OLSR_HELLO_MSG) {
+//				   fprintf (stdout,"  node[%d] send HELLO. \n",  (*it).orig_node_id());
 //					Packet* p		= allocpkt();
 //					struct hdr_cmn* ch	= HDR_CMN(p);
 		//			struct hdr_ip* ih	= HDR_IP(p);
@@ -2976,6 +3057,9 @@ void OLSR::send_pkt() {
 					cp.next_node_id_ = -1;
 					cp.buffer_[0] 	= cp.buffer_[0] | ((pkt_seq())& 0x1f)<<3;
 					cp.buffer_[0] = cp.buffer_[0] |(char((*it).msg_type())& 0x01)<<2;
+
+				   fprintf (stdout,"  node[%d] send HELLO, pkt_seq() = %x. \n",  (*it).orig_node_id(), pkt_seq());
+
 				if (quick_route())
 					{
 						int vtime_ = 1;
@@ -3050,21 +3134,25 @@ void OLSR::send_pkt() {
 						if( i == (*it).orig_node_id() ){
 							if( i%2 ){//奇数
 								n = ( i -1 ) / 2 ;
-//								cp.buffer_[5+n] = cp.buffer_[5+n]  |(char((*it).hello().mine_ds_node())& 0x0E)>>1;
-								cp.buffer_[6+n] = cp.buffer_[6+n] | (char((*it).hello().mine_ds_node())& 0x01)<<7;
-								cp.buffer_[6+n] = cp.buffer_[5+n] | (char((*it).hello().mine_cs_node())& 0x01);
-								cp.buffer_[6+n] = cp.buffer_[5+n] | (char(mine_cs_candidate())& 0x01)<<1;
+								cp.buffer_[6+n] = cp.buffer_[6+n] | (char((*it).hello().mine_ds_node()))<<7;
+								cp.buffer_[5+n] = cp.buffer_[5+n] | (char((*it).hello().mine_cs_node()));
+								cp.buffer_[5+n] = cp.buffer_[5+n] | (char(mine_cs_candidate()))<<1;
 							}
 							else{//偶数
 								n = i / 2;
-								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char((*it).hello().mine_ds_node())& 0x01)<<3;//0F
-								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char((*it).hello().mine_cs_node())& 0x01)<<4;//0F
-								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char(mine_cs_candidate())& 0x01)<<5;
+								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char((*it).hello().mine_ds_node()))<<3;//0F
+								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char((*it).hello().mine_cs_node()))<<4;//0F
+								cp.buffer_[5+n] =  cp.buffer_[5+n] |(char(mine_cs_candidate()))<<5;
 							}
 							break;
 						}
 					}
 
+//					 fprintf (stdout, "  HELLO : mine_ds_node() = %d .\n",
+//							 (*it).hello().mine_ds_node() );
+
+					 fprintf (stdout, "  HELLO : mine_ds_node() = %d, mine_cs_node() = %d, mine_cs_candidate() = %d .\n",
+							 (*it).hello().mine_ds_node(), (*it).hello().mine_cs_node(), (*it).hello().mine_cs_candidate() );
 
 					//added by xyy
 					cp.buffer_[15]  =cp.buffer_[15] | (char((*it).hello().saturation()) & 0x03)<<5;
@@ -3090,8 +3178,8 @@ void OLSR::send_pkt() {
 				}
 
 
-			else if ((*it).msg_type() == OLSR_TC_MSG)
-			{
+			else if ((*it).msg_type() == OLSR_TC_MSG)	{
+				   fprintf (stdout,"  node[%d] send TC. \n",  (*it).orig_node_id());
 //				fprintf (stdout , "TCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc\n ") ;
 //				Packet* p		= allocpkt();
 //				struct hdr_cmn* ch	= HDR_CMN(p);
@@ -3127,91 +3215,111 @@ void OLSR::send_pkt() {
 				cp.buffer_[3]	= cp.buffer_[3] |(char((*it).msg_seq_num())& 0x1f)<<1;
 
 				cp.buffer_[4]	= cp.buffer_[4] |(char((*it).tc().ansn())& 0xff);
-				int l;
-				l = (*it).tc().count;
-				for (int x = 0; x != l; x++)
+
+				fprintf (stdout,"  ansn = %d. \n",  (*it).tc().ansn());
+
+////			   fprintf (stdout,"    111. \n");
+//
+////			   fprintf (stdout,"     count = %d. \n",  (*it).tc().count );
+				int l1;
+				int node_id1_;
+				int y1;
+				l1 = (*it).tc().count;
+				for (int x1 = 0; x1 != l1; x1++)
 				{
-					node_id_ = (*it).tc().nb_main_node_id(x);
-					int y;
-					y = node_id_%8;
-					if(node_id_<8)
+//				   fprintf (stdout,"     nb_main_node_id(%d) = %d. \n", x1,  (*it).tc().nb_main_node_id(x1) );
+					node_id1_ = (*it).tc().nb_main_node_id(x1);
+					y1 = node_id1_%8;
+					if(node_id1_<8)
 					{//这里的封装，每个节点都是1--------不对，只会把是node_id的节点置为1，而这里面存放的是mprselset
-						if(y==0) { cp.buffer_[5]  =cp.buffer_[5] | 0x80;}
-						if(y==1){ cp.buffer_[5]  =cp.buffer_[5]  |0x40;}
-						if(y==2){ cp.buffer_[5]  =cp.buffer_[5]  |0x20;}
-						if(y==3){ cp.buffer_[5]  =cp.buffer_[5]  |0x10;}
-						if(y==4){ cp.buffer_[5]  =cp.buffer_[5]  |0x08;}
-						if(y==5){ cp.buffer_[5]  =cp.buffer_[5]  |0x04;}
-						if(y==6){ cp.buffer_[5]  =cp.buffer_[5]  |0x02;}
-						if(y==7){ cp.buffer_[5]  =cp.buffer_[5]  |0x01;}
+						if(y1==0) { cp.buffer_[5]  =cp.buffer_[5] | 0x80;}
+						if(y1==1){ cp.buffer_[5]  =cp.buffer_[5]  |0x40;}
+						if(y1==2){ cp.buffer_[5]  =cp.buffer_[5]  |0x20;}
+						if(y1==3){ cp.buffer_[5]  =cp.buffer_[5]  |0x10;}
+						if(y1==4){ cp.buffer_[5]  =cp.buffer_[5]  |0x08;}
+						if(y1==5){ cp.buffer_[5]  =cp.buffer_[5]  |0x04;}
+						if(y1==6){ cp.buffer_[5]  =cp.buffer_[5]  |0x02;}
+						if(y1==7){ cp.buffer_[5]  =cp.buffer_[5]  |0x01;}
 					}
-					else if(node_id_>15)
+					else if(node_id1_>15)
 					{
-						if(y==0){ cp.buffer_[7]  =cp.buffer_[7] |0x80;}
-						if(y==1){ cp.buffer_[7]  =cp.buffer_[7] |0x40;}
-						if(y==2){ cp.buffer_[7]  =cp.buffer_[7] |0x20;}
-						if(y==3){ cp.buffer_[7]  =cp.buffer_[7] |0x10;}
+						if(y1==0){ cp.buffer_[7]  =cp.buffer_[7] |0x80;}
+						if(y1==1){ cp.buffer_[7]  =cp.buffer_[7] |0x40;}
+						if(y1==2){ cp.buffer_[7]  =cp.buffer_[7] |0x20;}
+						if(y1==3){ cp.buffer_[7]  =cp.buffer_[7] |0x10;}
 					}
 					else
 					{
-						if(y==0){ cp.buffer_[6]  =cp.buffer_[6]   |0x80;}
-						if(y==1){ cp.buffer_[6]    =cp.buffer_[6]   |0x40;}
-						if(y==2){ cp.buffer_[6]    =cp.buffer_[6]   |0x20;}
-						if(y==3){ cp.buffer_[6]    =cp.buffer_[6]   |0x10;}
-						if(y==4){ cp.buffer_[6]    =cp.buffer_[6]   |0x08;}
-						if(y==5){ cp.buffer_[6]   = cp.buffer_[6]  |0x04;}
-						if(y==6){ cp.buffer_[6]   =cp.buffer_[6]  |0x02;}
-						if(y==7){ cp.buffer_[6]   =cp.buffer_[6]  |0x01;}
+						if(y1==0){ cp.buffer_[6]  =cp.buffer_[6]   |0x80;}
+						if(y1==1){ cp.buffer_[6]    =cp.buffer_[6]   |0x40;}
+						if(y1==2){ cp.buffer_[6]    =cp.buffer_[6]   |0x20;}
+						if(y1==3){ cp.buffer_[6]    =cp.buffer_[6]   |0x10;}
+						if(y1==4){ cp.buffer_[6]    =cp.buffer_[6]   |0x08;}
+						if(y1==5){ cp.buffer_[6]   = cp.buffer_[6]  |0x04;}
+						if(y1==6){ cp.buffer_[6]   =cp.buffer_[6]  |0x02;}
+						if(y1==7){ cp.buffer_[6]   =cp.buffer_[6]  |0x01;}
 					}
 				}
 				//sender address of the tc message
 				cp.buffer_[8]  =cp.buffer_[8] | (char(ra_node_id())& 0x1f);
 
+//			   fprintf (stdout,"    222. \n");
+
 				//added by xyy
-				l = (*it).tc().dsnum;
-				for (int x = 0; x != l; x++)
+				int l2;
+				int node_id2_;
+				int y2;
+			   state_.print_ds_node_id();
+			   fprintf (stdout,"     dsnum = %d . \n",  (*it).tc().dsnum );
+				l2 = (*it).tc().dsnum;
+//				l2 = 0;
+				for (int x2 = 0; x2 < l2; x2++)
 				{
-					node_id_ = (*it).tc().ds_main_node_id(x);
-					int y;
-					y = node_id_%8;
-					if(node_id_<8)
-					{//这里的封装，每个节点都是1--------不对，只会把是node_id的节点置为1，而这里面存放的是mprselset
-						if(y==0) { cp.buffer_[9]  =cp.buffer_[9] | 0x80;}
-						if(y==1){ cp.buffer_[9]  =cp.buffer_[9]  |0x40;}
-						if(y==2){ cp.buffer_[9]  =cp.buffer_[9]  |0x20;}
-						if(y==3){ cp.buffer_[9]  =cp.buffer_[9]  |0x10;}
-						if(y==4){ cp.buffer_[9]  =cp.buffer_[9]  |0x08;}
-						if(y==5){ cp.buffer_[9]  =cp.buffer_[9]  |0x04;}
-						if(y==6){ cp.buffer_[9]  =cp.buffer_[9]  |0x02;}
-						if(y==7){ cp.buffer_[9]  =cp.buffer_[9]  |0x01;}
+				   fprintf (stdout,"     ds_main_node_id(%d) = %d. \n", x2,  (*it).tc().ds_main_node_id(x2) );
+					node_id2_ = (*it).tc().ds_main_node_id(x2);
+					y2 = node_id2_%8;
+					if(node_id2_<8)
+					{//这里的封装，每个节点都是1--------不对，只会把是node_id的节点置为1，而这里面存放的是CD
+						if(y2==0) { cp.buffer_[9]  =cp.buffer_[9] | 0x80;}
+						if(y2==1){ cp.buffer_[9]  =cp.buffer_[9]  |0x40;}
+						if(y2==2){ cp.buffer_[9]  =cp.buffer_[9]  |0x20;}
+						if(y2==3){ cp.buffer_[9]  =cp.buffer_[9]  |0x10;}
+						if(y2==4){ cp.buffer_[9]  =cp.buffer_[9]  |0x08;}
+						if(y2==5){ cp.buffer_[9]  =cp.buffer_[9]  |0x04;}
+						if(y2==6){ cp.buffer_[9]  =cp.buffer_[9]  |0x02;}
+						if(y2==7){ cp.buffer_[9]  =cp.buffer_[9]  |0x01;}
 					}
-					else if(node_id_>15)
+					else if(node_id2_>15)
 					{
-						if(y==0){ cp.buffer_[11]  =cp.buffer_[11] |0x80;}
-						if(y==1){ cp.buffer_[11]  =cp.buffer_[11] |0x40;}
-						if(y==2){ cp.buffer_[11]  =cp.buffer_[11] |0x20;}
-						if(y==3){ cp.buffer_[11]  =cp.buffer_[11] |0x10;}
+						if(y2==0){ cp.buffer_[11]  =cp.buffer_[11] |0x80;}
+						if(y2==1){ cp.buffer_[11]  =cp.buffer_[11] |0x40;}
+						if(y2==2){ cp.buffer_[11]  =cp.buffer_[11] |0x20;}
+						if(y2==3){ cp.buffer_[11]  =cp.buffer_[11] |0x10;}
 					}
 					else
 					{
-						if(y==0){ cp.buffer_[10]  =cp.buffer_[10]   |0x80;}
-						if(y==1){ cp.buffer_[10]    =cp.buffer_[10]   |0x40;}
-						if(y==2){ cp.buffer_[10]    =cp.buffer_[10]   |0x20;}
-						if(y==3){ cp.buffer_[10]    =cp.buffer_[10]   |0x10;}
-						if(y==4){ cp.buffer_[10]    =cp.buffer_[10]   |0x08;}
-						if(y==5){ cp.buffer_[10]   = cp.buffer_[10]  |0x04;}
-						if(y==6){ cp.buffer_[10]   =cp.buffer_[10]  |0x02;}
-						if(y==7){ cp.buffer_[10]   =cp.buffer_[10]  |0x01;}
+						if(y2==0){ cp.buffer_[10]  =cp.buffer_[10]   |0x80;}
+						if(y2==1){ cp.buffer_[10]    =cp.buffer_[10]   |0x40;}
+						if(y2==2){ cp.buffer_[10]    =cp.buffer_[10]   |0x20;}
+						if(y2==3){ cp.buffer_[10]    =cp.buffer_[10]   |0x10;}
+						if(y2==4){ cp.buffer_[10]    =cp.buffer_[10]   |0x08;}
+						if(y2==5){ cp.buffer_[10]   = cp.buffer_[10]  |0x04;}
+						if(y2==6){ cp.buffer_[10]   =cp.buffer_[10]  |0x02;}
+						if(y2==7){ cp.buffer_[10]   =cp.buffer_[10]  |0x01;}
 					}
 				}
 
+
+//				   fprintf (stdout,"    333. \n");
 
 
 
 //				//added by xyy
 //				cp.buffer_[9]  =cp.buffer_[9] | (char((*it).tc().saturation()) & 0x03);
 
-				size_ = 8;
+//				size_ = 8;
+				size_ = 11;
+
 //				ch.ptype()		= PT_OLSR;
 //				ch.direction()		= hdr_cmn::DOWN;
 //				ch.size()		= IP_HDR_LEN + UDP_HDR_LEN + size_;
@@ -3231,7 +3339,7 @@ void OLSR::send_pkt() {
 
 //				Scheduler::instance().schedule(target_, p, 0.0);
 //				fprintf (stdout,"node %d  send tc packet\n",ra_node_id());
-				fprintf (stdout,"  node[%d] send TC packet\n",(*it).orig_node_id());
+//				fprintf (stdout,"  22node[%d] send TC packet\n",(*it).orig_node_id());
 				cp.packet_type_ = Route_Mac_Block::TC;
 				fprintf (stdout,"  ");
 				send_to_mac(&cp);
@@ -3337,7 +3445,7 @@ void OLSR::send_hello() {
 
 	OLSR_msg msg;
 
-    fprintf (stdout, "  node[%d] send_hello. \n", msg.orig_node_id() );
+//    fprintf (stdout, "  node[%d] send_hello. \n", msg.orig_node_id() );
 
 	double now		= CURRENT_TIME;
 	msg.msg_type()		= OLSR_HELLO_MSG;
@@ -3379,8 +3487,8 @@ void OLSR::send_hello() {
 
 	msg.ttl()		= 1;
 	msg.hop_count()		= 0;
-//	fprintf(stdout,"message sequence number is %d\n" ,msg_seq());
 	msg.msg_seq_num()	= msg_seq();
+	fprintf(stdout,"   node[%d] send HELLO, sequence_num = %d.\n" ,ra_node_id(), msg_seq());
 
 	msg.hello().reserved()		= 0;
 //	msg.hello().htime()		= OLSR::seconds_to_emf(hello_ival());
@@ -3406,7 +3514,7 @@ void OLSR::send_hello() {
 	//added by xyy
 	//如果有节点选择本节点为骨干节点，或者本节点选择自己为骨干节点，则标记HELLO消息
 //	if ( local_ds == 1 || choose_ds_node_id() == ra_node_id() )
-	if( state_.find_ds_node_id( ra_node_id() ) == 1 )
+	if( state_.find_ds_node_id( ra_node_id() ) == 1 ) // || ra_node_id() == 13 || ra_node_id() == 11)
 		msg.hello().mine_ds_node() = 1;
 	else
 		msg.hello().mine_ds_node() = 0;
@@ -3415,6 +3523,12 @@ void OLSR::send_hello() {
 		msg.hello().mine_cs_node() = 1;
 	else
 		msg.hello().mine_cs_node() = 0;
+
+//	 fprintf (stdout, "  HELLO : mine_ds_node() = %d.\n",
+//			 msg.hello().mine_ds_node());
+
+	 fprintf (stdout, "  HELLO : mine_ds_node() = %d, mine_cs_node() = %d, mine_cs_candidate() = %d .\n",
+			 msg.hello().mine_ds_node(), msg.hello().mine_cs_node(), mine_cs_candidate() );
 
 
 //	int local_ds = 0;
@@ -3454,14 +3568,16 @@ void OLSR::send_hello() {
 			// Establishes neighbor type.
 			if (state_.find_mpr_node_id( link_tuple->nb_main_node_id()) ){
 				nb_type = OLSR_MPR_NEIGH;//是MPR的骨干节点
-				fprintf (stdout,"  node[%d] is MPR node chosen by node[%d].\n",  link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
+				fprintf (stdout,"  node[%d] is MPR node chosen by node[%d].\n",
+						link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
 			}
 
 
-			else if (state_.find_cs_node_id( link_tuple->nb_main_node_id()) ){
-				nb_type = OLSR_CS_NEIGH;//是MPR的骨干节点
-				fprintf (stdout,"  node[%d] is CS node chosen by node[%d].\n",  link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
-			}
+//			else if (state_.find_cs_node_id( link_tuple->nb_main_node_id()) ){
+//				nb_type = OLSR_CS_NEIGH;//是MPR的骨干节点
+//				fprintf (stdout,"  node[%d] is CS node chosen by node[%d].\n",
+//						link_tuple->nb_main_node_id(),  link_tuple->local_main_node_id() );
+//			}
 
 //			//added by xyy
 //			//HELLO消息中只会标记该节点是不是骨干节点，以及该节点推选哪个邻居节点为骨干节点
@@ -3576,6 +3692,7 @@ void OLSR::send_tc() {
 
 //	fprintf(stdout,"TCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc\n");
 	OLSR_msg msg;
+
 	msg.msg_type()		= OLSR_TC_MSG;
 //	msg.vtime()		= OLSR::seconds_to_emf(OLSR_TOP_HOLD_TIME);
 //	msg.vtime()		= OLSR_TOP_HOLD_TIME;
@@ -3593,6 +3710,10 @@ void OLSR::send_tc() {
 	msg.tc().reserved()	= 0;
 	msg.tc().count		= 0;
 
+   fprintf (stdout,"  node[%d] send TC. \n",  ra_node_id());
+
+   fprintf (stdout,"    ansn = %d. \n",  msg.tc().ansn());
+
 	for (mprselset_t::iterator it = mprselset().begin(); it != mprselset().end(); it++) {
 		OLSR_mprsel_tuple* mprsel_tuple = *it;
 		int count = msg.tc().count;
@@ -3605,31 +3726,39 @@ void OLSR::send_tc() {
 	msg.msg_size()		= msg.size();
 //		fprintf(stdout,"TCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc\n");
 
+
 	//added by xyy
+	state_.print_ds_node_id();
+	msg.tc().dsnum = 0;
+	int dsnum = 0;
+	for (dsset_hello_t::iterator it = dsset_hello().begin(); it != dsset_hello().end(); it++) {
+		dsnum = msg.tc().dsnum;
+		if(dsnum >= 0 && dsnum < OLSR_MAX_ADDRS){
+			msg.tc().ds_main_node_id(dsnum) = *it;
+		    fprintf (stdout,"     ds_main_node_id(%d) = %d. \n", dsnum,  msg.tc().ds_main_node_id(dsnum) );
+			msg.tc().dsnum++;
+		}
+	}
+
+	   fprintf (stdout,"  node[%d] send TC. \n",  msg.orig_node_id() );
+
+//    fprintf (stdout, "  dsnum = %d .\n", msg.tc().dsnum);
+
+
+		//added by xyy
 	int saturation = 0;
 	if (quick_route())
 		{
 			fprintf (stdout, "  " );
 			saturation = enque_msg(msg, jitter);
-		    fprintf (stdout, "  quick_route : saturation = %d\n", saturation);
+			fprintf (stdout, "  quick_route : saturation = %d\n", saturation);
 		}
 		else
 		{
 			fprintf (stdout,"  ");
 			saturation = enque_msg(msg, JITTER);
-		    fprintf (stdout, "  normal : saturation = %d\n", saturation);
+			fprintf (stdout, "  normal : saturation = %d\n", saturation);
 		}
-
-
-	//added by xyy
-	for (dsset_hello_t::iterator it = dsset_hello().begin(); it != dsset_hello().end(); it++) {
-		int dsnum = msg.tc().dsnum;
-
-		assert(dsnum >= 0 && dsnum < OLSR_MAX_ADDRS);
-		msg.tc().ds_main_node_id(dsnum) = *it;
-		msg.tc().dsnum++;
-	}
-
 
 
 //		if (saturation < 5)
@@ -3737,7 +3866,7 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] is DS node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
 	}
-	else if ( hello.mine_ds_node() == 0 ){
+	else{
 		link_tuple->nb_main_node_ds() = 0;
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] isn't DS node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
@@ -3749,7 +3878,7 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] is CS node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
 	}
-	else if ( hello.mine_cs_node() == 0 ){
+	else{
 		link_tuple->nb_main_node_cs() = 0;
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] isn't CS node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
@@ -3761,7 +3890,7 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] is CS' node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
 	}
-	else if ( hello.mine_cs_candidate() == 0 ){
+	else{
 		link_tuple->nb_node_cs_candidate() = 0;
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] isn't CS' node told by node[%d].\n",
 				receiver_main, link_tuple->nb_main_node_id(), sender_main);
@@ -3775,14 +3904,14 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 			receiver_main,hello.choose_ds_node_id(), sender_main);
 
 	if ( hello.choose_ds_node_id() == receiver_main ){
+		link_tuple->local_main_node_ds() = 1;
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] is DS node told by node[%d].\n",
 				receiver_main, receiver_main, sender_main);
-		link_tuple->local_main_node_ds() = 1;
 	}
 	else{
+		link_tuple->local_main_node_ds() = 0;
 		fprintf (stdout,"  node[%d] received HELLO : node[%d] isn't DS node told by node[%d].\n",
 				receiver_main, receiver_main, sender_main);
-		link_tuple->local_main_node_ds() = 0;
 	}
 
 
@@ -3799,8 +3928,8 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 			fprintf (stdout, "Neighbor Type = SYM_NEIGH, ");
 		else if ( nt ==OLSR_MPR_NEIGH )
 			fprintf (stdout, "Neighbor Type = MPR_NEIGH, ");
-		else if ( nt ==OLSR_CS_NEIGH )
-			fprintf (stdout, "Neighbor Type = CS_NEIGH, ");
+//		else if ( nt ==OLSR_CS_NEIGH )
+//			fprintf (stdout, "Neighbor Type = CS_NEIGH, ");
 //		fprintf (stdout, "  Neighbor Type = %d \n", nt);
 //		fprintf (stdout, " YYYYYYYYYYYYYYYYYYYYYY%d \n", nt);
 
@@ -3820,7 +3949,7 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 
 		// We must not process invalid advertised links
 		if ((lt == OLSR_SYM_LINK && nt == OLSR_NOT_NEIGH) ||//链路对称，但没有对称邻居
-			  ( nt != OLSR_NOT_NEIGH && nt != OLSR_SYM_NEIGH && nt != OLSR_MPR_NEIGH && nt != OLSR_CS_NEIGH )){//} &&  nt != OLSR_DS_NEIGH )){//Neighbor Type不是三种类型之一
+			  ( nt != OLSR_NOT_NEIGH && nt != OLSR_SYM_NEIGH && nt != OLSR_MPR_NEIGH )){ // && nt != OLSR_CS_NEIGH )){//} &&  nt != OLSR_DS_NEIGH )){//Neighbor Type不是三种类型之一
 			continue;
 		}
 
@@ -3855,20 +3984,20 @@ void OLSR::link_sensing(OLSR_msg& msg, int receiver_main, int sender_main) {
 			if (hello_msg.nb_main_node_id(j) == receiver_main) {
 
 
-				//本节点不是DS节点，也没有被其他节点选为DS节点，但是却被其他节点选为MPR/CS节点，那说明被选为CS节点
-				if ( state_.find_ds_node_id( receiver_main ) == 0 &&
-						hello.choose_ds_node_id() != receiver_main &&
-						( nt == OLSR_CS_NEIGH || nt == OLSR_MPR_NEIGH ) ){
-					link_tuple->local_main_node_cs() = 1;
-					if ( nt == OLSR_CS_NEIGH )
-					fprintf (stdout,"  node[%d] received HELLO : node[%d] is CS node chosen by node[%d].\n",
-							receiver_main, link_tuple->local_main_node_id(), msg.orig_node_id());
-					else if ( nt == OLSR_MPR_NEIGH )
-					fprintf (stdout,"  node[%d] received HELLO : node[%d] is MPR-CS node chosen by node[%d].\n",
-							receiver_main, link_tuple->local_main_node_id(), msg.orig_node_id());
-				}
-				else
-					link_tuple->local_main_node_cs() = 0;
+//				//本节点不是DS节点，也没有被其他节点选为DS节点，但是却被其他节点选为MPR/CS节点，那说明被选为CS节点
+//				if ( state_.find_ds_node_id( receiver_main ) == 0 &&
+//						hello.choose_ds_node_id() != receiver_main &&
+//						( nt == OLSR_CS_NEIGH || nt == OLSR_MPR_NEIGH ) ){
+//					link_tuple->local_main_node_cs() = 1;
+//					if ( nt == OLSR_CS_NEIGH )
+//						fprintf (stdout,"  node[%d] received HELLO : node[%d] is CS node chosen by node[%d].\n",
+//								receiver_main, link_tuple->local_main_node_id(), msg.orig_node_id());
+//					else if ( nt == OLSR_MPR_NEIGH )
+//						fprintf (stdout,"  node[%d] received HELLO : node[%d] is MPR/CS node chosen by node[%d].\n",
+//								receiver_main, link_tuple->local_main_node_id(), msg.orig_node_id());
+//				}
+//				else
+//					link_tuple->local_main_node_cs() = 0;
 
 
 
@@ -3972,7 +4101,7 @@ void OLSR::populate_nb2hopset(OLSR_msg& msg) {
 
 					for (int j = 0; j < hello_msg.count; j++) {
 						int nb2hop_node_id = hello_msg.nb_main_node_id(j);
-						if (nt == OLSR_SYM_NEIGH || nt == OLSR_MPR_NEIGH  || nt == OLSR_CS_NEIGH ){
+						if (nt == OLSR_SYM_NEIGH || nt == OLSR_MPR_NEIGH){//  || nt == OLSR_CS_NEIGH ){
 //						if (nt == OLSR_SYM_NEIGH || nt == OLSR_MPR_NEIGH || nt == OLSR_DS_NEIGH) {
 							// if the main address of the 2-hop	neighbor address != main address of the receiving node: create a nb2hop_tuple;
 							// else,  silently discard the 2-hop neighbor address
@@ -4209,6 +4338,10 @@ void OLSR::nb_loss(OLSR_link_tuple* tuple) {
 	//added by xyy
     fprintf (stdout,"  ");
 	UCDS_DS_computation();
+
+	//added by xyy
+    fprintf (stdout,"  ");
+	UCDS_CS_computation();
 
     fprintf (stdout,"  ");
 //	mpr_computation();
@@ -4874,413 +5007,415 @@ void OLSR::UCDS_DS_computation()
 //added by xyy
 void OLSR::UCDS_CS_computation()
 {
-	fprintf (stdout, "CURRENT TIME = %f , STAGE = UCDS_CS_computation\n", CURRENT_TIME );
-
-	//得到本节点号
-	int main_node_id = 0;
-	int main_node_nbnum = 0;
-	for (linkset_t::iterator it0 = linkset().begin(); it0 != linkset().end(); it0++) {
-		OLSR_link_tuple* link_tuple = *it0;
-		main_node_id = link_tuple->local_main_node_id();
-		main_node_nbnum = link_tuple->local_main_node_nbnum() ;
-		break;
-	}
-
-	//打印一跳邻居节点
-	for (nbset_t::iterator it1 = nbset().begin(); it1 != nbset().end(); it1++){
-		OLSR_nb_tuple* nb_tuple = *it1;
-		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb_status = %d .  \n",
-				main_node_id, nb_tuple->nb_main_node_id(), nb_tuple->status() );
-	}
-	fprintf (stdout," \n");
-
-	//打印二跳邻居节点
-	for (nb2hopset_t::iterator it = nb2hopset().begin(); it != nb2hopset().end(); it++) {
-		OLSR_nb2hop_tuple* nb2hop_tuple = *it;
-		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb2hop_node_id = [%d] .  \n",
-				main_node_id, nb2hop_tuple->nb_main_node_id(), nb2hop_tuple->nb2hop_node_id() );
-	}
-	fprintf (stdout," \n");
-
-
-
-	nbset_t N;
-	nb2hopset_t N2;
-	//计算N集合
-	for (nbset_t::iterator it = nbset().begin(); it != nbset().end(); it++){
-		if ((*it)->status() == OLSR_STATUS_SYM)
-			N.push_back(*it);
-	}
-
-	//计算N2集合
-	for (nb2hopset_t::iterator it = nb2hopset().begin(); it != nb2hopset().end(); it++) {
-		OLSR_nb2hop_tuple* nb2hop_tuple = *it;
-		bool ok = true;
-		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb_main_node_id());//(iii)该节点二跳节点的一跳节点是该节点的一跳节点
-		if (nb_tuple == NULL)
-			ok = false;
-		else {
-			nb_tuple = state_.find_nb_tuple(nb2hop_tuple->nb_main_node_id(), OLSR_WILL_NEVER);//(i)该节点二跳节点的一跳节点是该节点的一跳节点，willingness为否
-			if (nb_tuple != NULL)
-				ok = false;
-		}
-
-		if (ok){
-			N2.push_back(nb2hop_tuple);
-		}
-	}
-
-
-
-	//处理好CS的更新
-	fprintf (stdout,"  1\n");
-	state_.print_cs_node_id();
-	fprintf (stdout,"  \n");
-
-	//先处理之前接收到的其他节点发送的HELLO消息里面记录的CS节点内容
-	int local_cs = 0;
-	for (linkset_t::iterator it0 = linkset().begin(); it0 != linkset().end(); it0++) {
-		OLSR_link_tuple* link_tuple = *it0;
-
-		//查看本节点是否被其他节点选为CS节点
-		if ( link_tuple->local_main_node_cs() == 1)
-			local_cs = 1;
-		//查看其邻居节点有没有被其他节点选为CS节点
-		if ( link_tuple->nb_main_node_cs() == 1 && state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 0 ){
-			state_.insert_cs_node_id( link_tuple->nb_main_node_id() );//如果CS表中没有该节点，则加入
-			fprintf (stdout,"    33 :  link_tuple->nb_main_node_id() = [%d] .\n",  link_tuple->nb_main_node_id());
-		}
-		else if ( link_tuple->nb_main_node_cs() == 0 && state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 1){
-			state_.erase_cs_node_id( link_tuple->nb_main_node_id() );// 如果该节点已经不是CS节点，则从表中删除
-			fprintf (stdout,"    44 :  link_tuple->nb_main_node_id() = [%d] .\n",  link_tuple->nb_main_node_id());
-		}
-
-	}
-
-		if ( local_cs == 1 && state_.find_cs_node_id(main_node_id ) == 0 ){
-			state_.insert_cs_node_id( main_node_id );//如果CS表中没有本节点，则加入
-			fprintf (stdout,"    11 :  link_tuple->local_main_node_id() = [%d] .\n",  main_node_id);
-		}
-		else if ( local_cs == 0 && state_.find_cs_node_id( main_node_id ) == 1){
-			state_.erase_cs_node_id( main_node_id );//如果该节点已经不是CS节点，则从表中删除
-			fprintf (stdout,"    22 :  link_tuple->local_main_node_id() = [%d] .\n",  main_node_id);
-		}
-
-	fprintf (stdout,"\n  2\n");
-	state_.print_cs_node_id();
-	fprintf (stdout,"  \n");
-
-
-
-
-	//在CS_candidate中推选CS节点
-	//节点j和k应该是二跳邻居节点的关系
-	//(1) 当节点j和k的共同邻居中有一个CS成员，此时CS规则不用执行
-	//(2) 若节点j和k的共同邻居节点中存在多个CS'，则具有最高支配因子的CS'节点被选为CS成员
-	//下面这个代码的编写还存在问题，要好好规划！！！！
-	int max_nbnum_cs_node_id = 0;
-	int max_nbnum_cs = 0;
-	bool cs_not =false;
-
-	for (nb2hopset_t::iterator it0 = N2.begin(); it0 != N2.end(); it0++) {
-		OLSR_nb2hop_tuple* nb2hop_tuple = *it0;
-		//初始化参数
-		max_nbnum_cs_node_id = 0;
-		max_nbnum_cs = 0;
-		cs_not =false;
-
-//		//找到本节点和其邻居节点的共同邻居节点
-//		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());
-
-		//节点j和k---本节点j和其二跳邻居节点k，两者之间至少一个为DS节点
-		if( state_.find_ds_node_id( main_node_id ) == 0 &&
-			 state_.find_ds_tc_node_id( nb2hop_tuple->nb2hop_node_id() ) == 0 )//从通过tc消息得到的DS节点集中寻找
-			continue;
-
-		for (linkset_t::iterator it1 = linkset().begin(); it1 != linkset().end(); it1++) {
-			OLSR_link_tuple* link_tuple = *it1;
-			//判断该一跳节点是否为连接本节点j和二跳节点k的中间节点，即是否是两节点的公共节点
-			if( link_tuple->nb_main_node_id() == nb2hop_tuple->nb_main_node_id() ){
-				//如果该共同邻居是CS节点，则不执行选取CS，直接跳出循环
-//				if ( link_tuple->nb_main_node_cs() == 1 ){
-				if ( state_.find_cs_node_id( link_tuple->nb_main_node_cs() ) == 1 ){
-					cs_not = true;
-					break;
-				}
-				//如果该共同邻居是CS候选节点，则选取支配因子最大的作为CS节点
-				else if(  link_tuple->nb_main_node_cs() == 0 &&
-								link_tuple->nb_node_cs_candidate() == 1 ){
-
-					//进入的条件是：max是初始化的状态+支配因子大于0+在相同支配因子的情况下选择节点数目更大的
-					if ( link_tuple->nb_main_node_nbnum() > max_nbnum_cs ||
-									( link_tuple->nb_main_node_nbnum() == max_nbnum_cs &&
-									  link_tuple->nb_main_node_id() > max_nbnum_cs_node_id )  ){
-						max_nbnum_cs_node_id = link_tuple->nb_main_node_id();
-						max_nbnum_cs = link_tuple->nb_main_node_nbnum();
-					}
-
-				}
-			}
-		}
-		//如果确定某节点为CS节点，则将其加入到CS本地节点集中
-		if( cs_not == false && max_nbnum_cs != 0 )
-			state_.insert_cs_node_id(max_nbnum_cs_node_id);
-
-	}
-
-
-
-
-	bool cs_never = false;//stage2 : 标志本节点是否一定不为CS成员
-	bool cs_must = false;//stage3 : 标志本节点必须为cs节点
-	bool cs_must1 = true;//stage3 -- step3 : 标志j/k不直连
-	bool cs_must2 = true;//stage3 -- step3 : 标志j/k不存在公共邻居
-	bool cs_except = false;//stage4 -- step2 : 标志cs例外规则是否成立
-	bool cs_rule = false;//stage4 -- step3 : 标志cs规则是否成立
-	bool disjoint = false;//stage4 -- step3 : 标志j/k两邻居节点集是否相交
-	int nb_node = 0;//stage3 -- step2 : 在执行CS例外规则第二条时，储存非DS成员节点
-	int step = 0;
-
-
-	//stage2 非CS规则
-	//对于非DS成员节点i，其任意邻居节点j和k都是直接相连，则节点i一定不为CS成员
-	if ( state_.find_ds_node_id( main_node_id ) == 0 ){//如果本节点不是DS节点
-
-		for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
-			OLSR_nb_tuple* nb_tuple0 = *it0;
-
-			for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
-				OLSR_nb_tuple* nb_tuple1 = *it1;
-				cs_never = false;
-
-				for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
-					OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
-					//由于N2中已经考虑过双向链路了，所以这里只要考察一条链路的存在就可以了
-					//以下是否任意邻居节点都直接相连，以下的判断是相连的
-					if ( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
-							nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
-						cs_never =  true;
-						break;
-					}
-				}
-
-				if( cs_never == false )
-						break;
-			}
-
-			if( cs_never == false )
-				break;
-		}
-
-		if( cs_never == true )
-			fprintf (stdout,"  The node stop by Stage2, this node can't be CS. \n");
-		else
-			fprintf (stdout,"  The node pass the Stage2, this node will go to Stage3, may be this node will be CS node. \n");
-
-
-		//stage3 得到必须为CS节点
-		if( cs_never == false ){
-			for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
-				OLSR_nb_tuple* nb_tuple0 = *it0;
-
-				for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
-					OLSR_nb_tuple* nb_tuple1 = *it1;
-					step = 0;
-					cs_must = false;
-					cs_must1 = false;
-					cs_must2 = false;
-
-					//若只有一个邻居节点为DS节点
-					if( ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 &&
-							state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1 ) ||
-							( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
-							  state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )){
-						//CS例外规则第二条：本节点与非DS节点有一个共同的CS邻居节点，CS规则不用执行
-						//nb_node储存非DS节点的节点号
-						if ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 )
-							nb_node = nb_tuple0->nb_main_node_id();
-						else if ( state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )
-							nb_node = nb_tuple1->nb_main_node_id();
-
-						step = 1;
-						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
-								OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
-								if ( nb2hop_tuple->nb_main_node_id() == nb_node &&
-										state_.find_ds_node_id( nb2hop_tuple->nb2hop_node_id() ) == 1 ){//DS集中只储存一跳邻居是否为DS节点
-									OLSR_nb_tuple*nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());//该二跳节点是否为本节点的一跳节点
-									if ( nb_tuple != NULL )//CS例外规则成立，跳转step1
-										step = 1;
-									else//CS例外规则不成立，跳转step3
-										step = 3;
-									break;
-									}
-								}
-
-						}
-
-					if( step == 1 )
-							continue;
-
-
-					//若两个邻居节点都为DS节点
-					else if( step == 3 ||
-								   (state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
-									state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1 ) ){
-
-						//两节点不直接相连
-						for (nb2hopset_t::iterator it3 = N2.begin(); it3 != N2.end(); it3++) {
-							OLSR_nb2hop_tuple* nb2hop_tuple = *it3;
-							if ( it3 == N2.begin() )
-								cs_must1 = true;//初始化，这里的初始化不能放到外面，乙方N2为空的时候把节点加到CS‘中
-
-							if( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
-								 nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
-								cs_must1 = false;
-								break;
-							}
-						}
-
-						if( cs_must1 == false )//存在两邻居节点直接相连
-							continue;
-
-						//且两节点不存在公共邻居(非本节点)
-						for (nb2hopset_t::iterator it4 = N2.begin(); it4 != N2.end(); it4++) {
-							OLSR_nb2hop_tuple* nb2hop_tuple0 = *it4;
-							if( nb2hop_tuple0->nb_main_node_id() == nb_tuple0->nb_main_node_id() ){
-
-								for (nb2hopset_t::iterator it5 = N2.begin(); it5 != N2.end(); it5++) {
-									OLSR_nb2hop_tuple* nb2hop_tuple1 = *it5;
-									if ( it4 == N2.begin() && it5 == N2.begin() )
-										cs_must2 = true;//初始化
-
-									if( nb2hop_tuple1->nb_main_node_id() == nb_tuple1->nb_main_node_id() ){
-										if( nb2hop_tuple0->nb2hop_node_id() == nb2hop_tuple1->nb2hop_node_id() ){ //}&&
-//											 nb2hop_tuple0->nb2hop_node_id() != main_node_id ){
-											cs_must2 = false;
-											break;
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if ( cs_must1 == true && cs_must2 == true ){
-						cs_must = true;
-						break;
-					}
-
-				}
-
-				if ( cs_must == true )
-					break;
-			}
-		}
-
-
-		//stage4 CS例外规则、CS规则
-
-
-		std::set<int> dsn_node1;
-		std::set<int> dsn_node2;
-		if( cs_never == false && cs_must == false ){
-
-			//stage4--step2-2
-			for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
-				OLSR_nb_tuple* nb_tuple0 = *it0;
-
-				for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
-					OLSR_nb_tuple* nb_tuple1 = *it1;
-					disjoint = false;
-
-					//至少有一个邻居节点为DS节点
-					if( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 ||
-						 state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1  ){
-						//CS例外规则第二条：本节点与非DS节点有一个共同的DS邻居节点，CS规则不用执行
-						//nb_node储存非DS节点的节点号
-						if ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 )
-							nb_node = nb_tuple0->nb_main_node_id();
-						else if ( state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )
-							nb_node = nb_tuple1->nb_main_node_id();
-
-						step = 1;
-						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
-							OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
-							if ( nb2hop_tuple->nb_main_node_id() == nb_node &&
-								  state_.find_ds_node_id( nb2hop_tuple->nb2hop_node_id() ) == 1 ){//DS集中只储存一跳邻居是否为DS节点
-								OLSR_nb_tuple*nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());//该二跳节点是否为本节点的一跳节点
-								if ( nb_tuple != NULL )//CS例外规则成立，跳转step1
-									step = 1;
-								else//CS例外规则不成立，跳转step3
-									step = 3;
-								break;
-								}
-							}
-
-						}
-
-					if( step == 1 )
-							continue;
-
-
-					//stage4--step3
-					else if(  step == 3 ){
-
-						dsn_node1.insert( nb_tuple0->nb_main_node_id() );
-						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2 ++) {
-							OLSR_nb2hop_tuple* nb2hop_tuple0 = *it2;
-							if( nb2hop_tuple0->nb2hop_node_id() != main_node_id &&
-									nb2hop_tuple0->nb_main_node_id() == nb_tuple0->nb_main_node_id() )
-								dsn_node1.insert( nb2hop_tuple0->nb2hop_node_id() );//得到其中一个节点的邻居节点集
-						}
-
-						dsn_node1.insert( nb_tuple1->nb_main_node_id() );
-						for (nb2hopset_t::iterator it3 = N2.begin(); it3 != N2.end(); it3 ++) {
-							OLSR_nb2hop_tuple* nb2hop_tuple1 = *it3;
-							if( nb2hop_tuple1->nb2hop_node_id() != main_node_id &&
-									nb2hop_tuple1->nb_main_node_id() == nb_tuple1->nb_main_node_id() )
-								dsn_node2.insert( nb2hop_tuple1->nb2hop_node_id() );//得到另一个节点的邻居节点集
-						}
-
-						for (std::set<int>::iterator it4 = dsn_node1.begin(); it4 != dsn_node1.end(); it4++) {
-							for (std::set<int>::iterator it5 = dsn_node2.begin(); it5 != dsn_node2.end(); it5++) {
-								if ( it4 == dsn_node1.begin() && it5 == dsn_node2.begin() )
-									disjoint = true;//初始化
-								if( (*it4) == (*it5) ){//若两者DS邻居节点集相交，则本节点不为CS'
-									disjoint = false;
-									break;
-								}
-							}
-						}
-
-						dsn_node1.clear();
-						dsn_node2.clear();
-
-						if( disjoint == true )
-							break;
-
-					}
-
-					if( disjoint == true )
-						break;
-
-				}
-
-				if( disjoint == true )
-					break;
-
-			}
-		}
-
-		if( disjoint == true ){
-			//本节点被标记为CS‘，若节点j/k的共同体邻居节点中存在多个CS’，则具有最高支配因子的CS‘成员被选为CS节点
-			//所有这里还要标志节点为CS’
-			mine_cs_candidate() = 1;
-		}
-
-
-	}
-
+	mine_cs_candidate() = 0;
+
+//	fprintf (stdout, "CURRENT TIME = %f , STAGE = UCDS_CS_computation\n", CURRENT_TIME );
+//
+//	//得到本节点号
+//	int main_node_id = 0;
+////	int main_node_nbnum = 0;
+//	for (linkset_t::iterator it0 = linkset().begin(); it0 != linkset().end(); it0++) {
+//		OLSR_link_tuple* link_tuple = *it0;
+//		main_node_id = link_tuple->local_main_node_id();
+////		main_node_nbnum = link_tuple->local_main_node_nbnum() ;
+//		break;
+//	}
+//
+//
+//	nbset_t N;
+//	nb2hopset_t N2;
+//	//计算N集合
+//	for (nbset_t::iterator it = nbset().begin(); it != nbset().end(); it++){
+//		if ((*it)->status() == OLSR_STATUS_SYM)
+//			N.push_back(*it);
+//	}
+//
+//	//计算N2集合
+//	for (nb2hopset_t::iterator it = nb2hopset().begin(); it != nb2hopset().end(); it++) {
+//		OLSR_nb2hop_tuple* nb2hop_tuple = *it;
+//		bool ok = true;
+//		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb_main_node_id());//(iii)该节点二跳节点的一跳节点是该节点的一跳节点
+//		if (nb_tuple == NULL)
+//			ok = false;
+//		else {
+//			nb_tuple = state_.find_nb_tuple(nb2hop_tuple->nb_main_node_id(), OLSR_WILL_NEVER);//(i)该节点二跳节点的一跳节点是该节点的一跳节点，willingness为否
+//			if (nb_tuple != NULL)
+//				ok = false;
+//		}
+//
+//		if (ok){
+//			N2.push_back(nb2hop_tuple);
+//		}
+//	}
+//
+////	//打印N中一跳邻居节点
+////	for (nbset_t::iterator it1 = N.begin(); it1 != N.end(); it1++){
+////		OLSR_nb_tuple* nb_tuple = *it1;
+////		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb_status = %d .  \n",
+////				main_node_id, nb_tuple->nb_main_node_id(), nb_tuple->status() );
+////	}
+////	fprintf (stdout," \n");
+////
+////	//打印N2中二跳邻居节点
+////	for (nb2hopset_t::iterator it = N2.begin(); it != N2.end(); it++) {
+////		OLSR_nb2hop_tuple* nb2hop_tuple = *it;
+////		fprintf (stdout, "  main_node_id = [%d], nb_node_id = [%d], nb2hop_node_id = [%d] .  \n",
+////				main_node_id, nb2hop_tuple->nb_main_node_id(), nb2hop_tuple->nb2hop_node_id() );
+////	}
+////	fprintf (stdout," \n");
+//
+//
+//	//处理好CS的更新
+//	fprintf (stdout,"  1\n");
+//	state_.print_cs_node_id();
+//	fprintf (stdout,"  \n");
+//
+//	//先处理之前接收到的其他节点发送的HELLO消息里面记录的CS节点内容
+//	int local_cs = 0;
+//	for (linkset_t::iterator it0 = linkset().begin(); it0 != linkset().end(); it0++) {
+//		OLSR_link_tuple* link_tuple = *it0;
+//
+//		//查看本节点是否被其他节点选为CS节点
+//		if ( link_tuple->local_main_node_cs() == 1)
+//			local_cs = 1;
+//		//查看其邻居节点有没有被其他节点选为CS节点
+//		if ( link_tuple->nb_main_node_cs() == 1 && state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 0 ){
+//			state_.insert_cs_node_id( link_tuple->nb_main_node_id() );//如果CS表中没有该节点，则加入
+//			fprintf (stdout,"    33 :  link_tuple->nb_main_node_id() = [%d] .\n",  link_tuple->nb_main_node_id());
+//		}
+//		else if ( link_tuple->nb_main_node_cs() == 0 && state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 1){
+//			state_.erase_cs_node_id( link_tuple->nb_main_node_id() );// 如果该节点已经不是CS节点，则从表中删除
+//			fprintf (stdout,"    44 :  link_tuple->nb_main_node_id() = [%d] .\n",  link_tuple->nb_main_node_id());
+//		}
+//
+//	}
+//
+//		if ( local_cs == 1 && state_.find_cs_node_id(main_node_id ) == 0 ){
+//			state_.insert_cs_node_id( main_node_id );//如果CS表中没有本节点，则加入
+//			fprintf (stdout,"    11 :  link_tuple->local_main_node_id() = [%d] .\n",  main_node_id);
+//		}
+//		else if ( local_cs == 0 && state_.find_cs_node_id( main_node_id ) == 1){
+//			state_.erase_cs_node_id( main_node_id );//如果该节点已经不是CS节点，则从表中删除
+//			fprintf (stdout,"    22 :  link_tuple->local_main_node_id() = [%d] .\n",  main_node_id);
+//		}
+//
+//	fprintf (stdout,"\n  2\n");
+//	state_.print_cs_node_id();
+//	fprintf (stdout,"  \n");
+//
+//
+//
+//
+//	//在CS_candidate中推选CS节点
+//	//节点j和k应该是二跳邻居节点的关系
+//	//(1) 当节点j和k的共同邻居中有一个CS成员，此时CS规则不用执行
+//	//(2) 若节点j和k的共同邻居节点中存在多个CS'，则具有最高支配因子的CS'节点被选为CS成员
+//	//下面这个代码的编写可能还存在问题，要好好规划！！！！
+//	int max_nbnum_cs_node_id = 0;
+//	int max_nbnum_cs = 0;
+//	bool cs_not =false;
+//
+//	for (nb2hopset_t::iterator it0 = N2.begin(); it0 != N2.end(); it0++) {
+//		OLSR_nb2hop_tuple* nb2hop_tuple = *it0;
+//		//初始化参数
+//		max_nbnum_cs_node_id = 0;
+//		max_nbnum_cs = 0;
+//		cs_not =false;
+//
+////		//找到本节点和其邻居节点的共同邻居节点
+////		OLSR_nb_tuple* nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());
+//
+//		//节点j和k---本节点j和其二跳邻居节点k，两者之间至少一个为DS节点
+//		if( state_.find_ds_node_id( main_node_id ) == 0 &&
+//			 state_.find_ds_tc_node_id( nb2hop_tuple->nb2hop_node_id() ) == 0 )//从通过tc消息得到的DS节点集中寻找
+//			continue;
+//
+//		for (linkset_t::iterator it1 = linkset().begin(); it1 != linkset().end(); it1++) {
+//			OLSR_link_tuple* link_tuple = *it1;
+//			//判断该一跳节点是否为连接本节点j和二跳节点k的中间节点，即是否是两节点的公共节点
+//			if( link_tuple->nb_main_node_id() == nb2hop_tuple->nb_main_node_id() ){
+//				//如果该共同邻居是CS节点，则不执行选取CS，直接跳出循环
+////				if ( link_tuple->nb_main_node_cs() == 1 ){
+//				if ( state_.find_cs_node_id( link_tuple->nb_main_node_cs() ) == 1 ){
+//					cs_not = true;
+//					break;
+//				}
+//				//如果该共同邻居是CS候选节点，则选取支配因子最大的作为CS节点
+//				else if(  link_tuple->nb_main_node_cs() == 0 &&
+//								link_tuple->nb_node_cs_candidate() == 1 ){
+//
+//					//进入的条件是：max是初始化的状态+支配因子大于0+在相同支配因子的情况下选择节点数目更大的
+//					if ( link_tuple->nb_main_node_nbnum() > max_nbnum_cs ||
+//									( link_tuple->nb_main_node_nbnum() == max_nbnum_cs &&
+//									  link_tuple->nb_main_node_id() > max_nbnum_cs_node_id )  ){
+//						max_nbnum_cs_node_id = link_tuple->nb_main_node_id();
+//						max_nbnum_cs = link_tuple->nb_main_node_nbnum();
+//					}
+//
+//				}
+//			}
+//		}
+//		//如果确定某节点为CS节点，则将其加入到CS本地节点集中
+//		if( cs_not == false && max_nbnum_cs != 0 )
+//			state_.insert_cs_node_id(max_nbnum_cs_node_id);
+//
+//	}
+//
+//
+//
+//
+//	bool cs_never = false;//stage2 : 标志本节点是否一定不为CS成员
+//	bool cs_must = false;//stage3 : 标志本节点必须为cs节点
+//	bool cs_must1 = true;//stage3 -- step3 : 标志j/k不直连
+//	bool cs_must2 = true;//stage3 -- step3 : 标志j/k不存在公共邻居
+//	bool cs_except = false;//stage4 -- step2 : 标志cs例外规则是否成立
+//	bool cs_rule = false;//stage4 -- step3 : 标志cs规则是否成立
+//	bool disjoint = false;//stage4 -- step3 : 标志j/k两邻居节点集是否相交
+//	int nb_node = 0;//stage3 -- step2 : 在执行CS例外规则第二条时，储存非DS成员节点
+//	int step = 0;
+//
+//
+//	//stage2 非CS规则
+//	//对于非DS成员节点i，其任意邻居节点j和k都是直接相连，则节点i一定不为CS成员
+//	if ( state_.find_ds_node_id( main_node_id ) == 0 ){//如果本节点不是DS节点
+//
+//		for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
+//			OLSR_nb_tuple* nb_tuple0 = *it0;
+//
+//			for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
+//				OLSR_nb_tuple* nb_tuple1 = *it1;
+//				cs_never = false;
+//
+//				for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
+//					OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
+//					//由于N2中已经考虑过双向链路了，所以这里只要考察一条链路的存在就可以了
+//					//以下是否任意邻居节点都直接相连，以下的判断是相连的
+//					if ( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
+//							nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
+//						cs_never =  true;
+//						break;
+//					}
+//				}
+//
+//				if( cs_never == false )
+//						break;
+//			}
+//
+//			if( cs_never == false )
+//				break;
+//		}
+//
+//		if( cs_never == true )
+//			fprintf (stdout,"  The node stop by Stage2, this node can't be CS. \n");
+//		else
+//			fprintf (stdout,"  The node pass the Stage2, this node will go to Stage3, may be this node will be CS node. \n");
+//
+//
+//		//stage3 得到必须为CS节点
+//		if( cs_never == false ){
+//			for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
+//				OLSR_nb_tuple* nb_tuple0 = *it0;
+//
+//				for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
+//					OLSR_nb_tuple* nb_tuple1 = *it1;
+//					step = 0;
+//					cs_must = false;
+//					cs_must1 = false;
+//					cs_must2 = false;
+//
+//					//若只有一个邻居节点为DS节点
+//					if( ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 &&
+//							state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1 ) ||
+//							( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
+//							  state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )){
+//						//CS例外规则第二条：本节点与非DS节点有一个共同的CS邻居节点，CS规则不用执行
+//						//nb_node储存非DS节点的节点号
+//						if ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 )
+//							nb_node = nb_tuple0->nb_main_node_id();
+//						else if ( state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )
+//							nb_node = nb_tuple1->nb_main_node_id();
+//
+//						step = 1;
+//						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
+//								OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
+//								if ( nb2hop_tuple->nb_main_node_id() == nb_node &&
+//										state_.find_ds_node_id( nb2hop_tuple->nb2hop_node_id() ) == 1 ){//DS集中只储存一跳邻居是否为DS节点
+//									OLSR_nb_tuple*nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());//该二跳节点是否为本节点的一跳节点
+//									if ( nb_tuple != NULL )//CS例外规则成立，跳转step1
+//										step = 1;
+//									else//CS例外规则不成立，跳转step3
+//										step = 3;
+//									break;
+//									}
+//								}
+//
+//						}
+//
+//					if( step == 1 )
+//							continue;
+//
+//
+//					//若两个邻居节点都为DS节点
+//					else if( step == 3 ||
+//								   (state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 &&
+//									state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1 ) ){
+//
+//						//两节点不直接相连
+//						for (nb2hopset_t::iterator it3 = N2.begin(); it3 != N2.end(); it3++) {
+//							OLSR_nb2hop_tuple* nb2hop_tuple = *it3;
+//							if ( it3 == N2.begin() )
+//								cs_must1 = true;//初始化，这里的初始化不能放到外面，乙方N2为空的时候把节点加到CS‘中
+//
+//							if( nb2hop_tuple->nb_main_node_id() == nb_tuple0->nb_main_node_id() &&
+//								 nb2hop_tuple->nb2hop_node_id() == nb_tuple1->nb_main_node_id() ){
+//								cs_must1 = false;
+//								break;
+//							}
+//						}
+//
+//						if( cs_must1 == false )//存在两邻居节点直接相连
+//							continue;
+//
+//						//且两节点不存在公共邻居(非本节点)
+//						for (nb2hopset_t::iterator it4 = N2.begin(); it4 != N2.end(); it4++) {
+//							OLSR_nb2hop_tuple* nb2hop_tuple0 = *it4;
+//							if( nb2hop_tuple0->nb_main_node_id() == nb_tuple0->nb_main_node_id() ){
+//
+//								for (nb2hopset_t::iterator it5 = N2.begin(); it5 != N2.end(); it5++) {
+//									OLSR_nb2hop_tuple* nb2hop_tuple1 = *it5;
+//									if ( it4 == N2.begin() && it5 == N2.begin() )
+//										cs_must2 = true;//初始化
+//
+//									if( nb2hop_tuple1->nb_main_node_id() == nb_tuple1->nb_main_node_id() ){
+//										if( nb2hop_tuple0->nb2hop_node_id() == nb2hop_tuple1->nb2hop_node_id() ){ //}&&
+////											 nb2hop_tuple0->nb2hop_node_id() != main_node_id ){
+//											cs_must2 = false;
+//											break;
+//										}
+//									}
+//								}
+//							}
+//						}
+//					}
+//
+//					if ( cs_must1 == true && cs_must2 == true ){
+//						cs_must = true;
+//						break;
+//					}
+//
+//				}
+//
+//				if ( cs_must == true )
+//					break;
+//			}
+//		}
+//
+//
+//		//stage4 CS例外规则、CS规则
+//
+//
+//		std::set<int> dsn_node1;
+//		std::set<int> dsn_node2;
+//		if( cs_never == false && cs_must == false ){
+//
+//			//stage4--step2-2
+//			for (nbset_t::iterator it0 = N.begin(); it0 != N.end(); it0++){
+//				OLSR_nb_tuple* nb_tuple0 = *it0;
+//
+//				for (nbset_t::iterator it1 = it0 + 1; it1 != N.end(); it1++){
+//					OLSR_nb_tuple* nb_tuple1 = *it1;
+//					disjoint = false;
+//
+//					//至少有一个邻居节点为DS节点
+//					if( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 1 ||
+//						 state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 1  ){
+//						//CS例外规则第二条：本节点与非DS节点有一个共同的DS邻居节点，CS规则不用执行
+//						//nb_node储存非DS节点的节点号
+//						if ( state_.find_ds_node_id( nb_tuple0->nb_main_node_id() ) == 0 )
+//							nb_node = nb_tuple0->nb_main_node_id();
+//						else if ( state_.find_ds_node_id( nb_tuple1->nb_main_node_id() ) == 0 )
+//							nb_node = nb_tuple1->nb_main_node_id();
+//
+//						step = 1;
+//						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2++) {
+//							OLSR_nb2hop_tuple* nb2hop_tuple = *it2;
+//							if ( nb2hop_tuple->nb_main_node_id() == nb_node &&
+//								  state_.find_ds_node_id( nb2hop_tuple->nb2hop_node_id() ) == 1 ){//DS集中只储存一跳邻居是否为DS节点
+//								OLSR_nb_tuple*nb_tuple = state_.find_sym_nb_tuple(nb2hop_tuple->nb2hop_node_id());//该二跳节点是否为本节点的一跳节点
+//								if ( nb_tuple != NULL )//CS例外规则成立，跳转step1
+//									step = 1;
+//								else//CS例外规则不成立，跳转step3
+//									step = 3;
+//								break;
+//								}
+//							}
+//
+//						}
+//
+//					if( step == 1 )
+//							continue;
+//
+//
+//					//stage4--step3
+//					else if(  step == 3 ){
+//
+//						dsn_node1.insert( nb_tuple0->nb_main_node_id() );
+//						for (nb2hopset_t::iterator it2 = N2.begin(); it2 != N2.end(); it2 ++) {
+//							OLSR_nb2hop_tuple* nb2hop_tuple0 = *it2;
+//							if( nb2hop_tuple0->nb2hop_node_id() != main_node_id &&
+//									nb2hop_tuple0->nb_main_node_id() == nb_tuple0->nb_main_node_id() )
+//								dsn_node1.insert( nb2hop_tuple0->nb2hop_node_id() );//得到其中一个节点的邻居节点集
+//						}
+//
+//						dsn_node1.insert( nb_tuple1->nb_main_node_id() );
+//						for (nb2hopset_t::iterator it3 = N2.begin(); it3 != N2.end(); it3 ++) {
+//							OLSR_nb2hop_tuple* nb2hop_tuple1 = *it3;
+//							if( nb2hop_tuple1->nb2hop_node_id() != main_node_id &&
+//									nb2hop_tuple1->nb_main_node_id() == nb_tuple1->nb_main_node_id() )
+//								dsn_node2.insert( nb2hop_tuple1->nb2hop_node_id() );//得到另一个节点的邻居节点集
+//						}
+//
+//						for (std::set<int>::iterator it4 = dsn_node1.begin(); it4 != dsn_node1.end(); it4++) {
+//							for (std::set<int>::iterator it5 = dsn_node2.begin(); it5 != dsn_node2.end(); it5++) {
+//								if ( it4 == dsn_node1.begin() && it5 == dsn_node2.begin() )
+//									disjoint = true;//初始化
+//								if( (*it4) == (*it5) ){//若两者DS邻居节点集相交，则本节点不为CS'
+//									disjoint = false;
+//									break;
+//								}
+//							}
+//						}
+//
+//						dsn_node1.clear();
+//						dsn_node2.clear();
+//
+//						if( disjoint == true )
+//							break;
+//
+//					}
+//
+//					if( disjoint == true )
+//						break;
+//
+//				}
+//
+//				if( disjoint == true )
+//					break;
+//
+//			}
+//		}
+//
+//		if( disjoint == true ){
+//			//本节点被标记为CS‘，若节点j/k的共同体邻居节点中存在多个CS’，则具有最高支配因子的CS‘成员被选为CS节点
+//			//所有这里还要标志节点为CS’
+//			mine_cs_candidate() = 1;
+//		}
+//		else
+//			mine_cs_candidate() = 0;
+//
+//
+//	}
+//
 }
 
 
@@ -5353,14 +5488,14 @@ void OLSR::UCDS_mpr_computation()
 	}
 
 
-	fprintf (stdout,"  N2 : \n");
-	for (nb2hopset_t::iterator it = N2.begin(); it != N2.end(); it++) {
-//		fprintf (stdout,"  I am come in . \n");
-		OLSR_nb2hop_tuple* N2_tuple = *it;
-		fprintf (stdout,"  main_node = %d, N2_nb_node_id = %d, N2_nb2hop_node_id = %d. \n",
-				main_node,  N2_tuple->nb_main_node_id(), N2_tuple->nb2hop_node_id());
-	}
-	fprintf (stdout," \n");
+//	fprintf (stdout,"  N2 : \n");
+//	for (nb2hopset_t::iterator it = N2.begin(); it != N2.end(); it++) {
+////		fprintf (stdout,"  I am come in . \n");
+//		OLSR_nb2hop_tuple* N2_tuple = *it;
+//		fprintf (stdout,"  main_node = %d, N2_nb_node_id = %d, N2_nb2hop_node_id = %d. \n",
+//				main_node,  N2_tuple->nb_main_node_id(), N2_tuple->nb2hop_node_id());
+//	}
+//	fprintf (stdout," \n");
 
 
 
@@ -5376,8 +5511,8 @@ void OLSR::UCDS_mpr_computation()
 //					fprintf( stdout, "  node[%d] is the DS node .\n", link_tuple->nb_main_node_id() );
 
 //				else if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 ){
-				if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 &&
-						state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 0 ){
+				if( state_.find_ds_node_id( link_tuple->nb_main_node_id() ) == 0 ){//&&
+//						state_.find_cs_node_id( link_tuple->nb_main_node_id() ) == 0 ){
 //					fprintf( stdout, "  node[%d] isn't DS node .\n", link_tuple->nb_main_node_id() );
 
 					for (nb2hopset_t::iterator it1 = N2.begin(); it1 != N2.end(); it1++) {
